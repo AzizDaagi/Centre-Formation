@@ -25,6 +25,10 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${PROJECT_SOURCES}
         db.h db.cpp
         salle.h salle.cpp
+        formateur.h formateur.cpp
+        cours.h cours.cpp
+        stagiaire.h stagiaire.cpp
+        passwordutils.h passwordutils.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET centre_formation APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
