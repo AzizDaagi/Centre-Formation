@@ -8,25 +8,21 @@ bool Salle::ajouter() {
     QSqlQuery query(DB::instance().database());
     query.prepare(
         "INSERT INTO SALLE (NOM_SALLE, CAPACITE, TYPE_SALLE, STATUT) "
-        "VALUES (:nom, :capacite, :type, :statut)"
-        );
+        "VALUES (:nom, :capacite, :type, :statut) "
+        "RETURNING ID_SALLE INTO :out_id"
+    );
     query.bindValue(":nom", m_nom);
     query.bindValue(":capacite", m_capacite);
     query.bindValue(":type", m_type);
     query.bindValue(":statut", m_statut);
+    query.bindValue(":out_id", 0, QSql::Out);
 
     if (!query.exec()) {
         qDebug() << "Erreur ajout salle:" << query.lastError().text();
         return false;
     }
 
-    // Récupère l'ID auto-généré pour cette nouvelle salle
-    QSqlQuery idQuery(DB::instance().database());
-    idQuery.prepare("SELECT MAX(ID_SALLE) FROM SALLE");
-    if (idQuery.exec() && idQuery.next()) {
-        m_id = idQuery.value(0).toInt();
-    }
-
+    m_id = query.boundValue(":out_id").toInt();
     return true;
 }
 

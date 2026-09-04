@@ -16,7 +16,6 @@ set(PROJECT_SOURCES
         main.cpp
         mainwindow.cpp
         mainwindow.h
-        mainwindow.ui
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -29,6 +28,14 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         cours.h cours.cpp
         stagiaire.h stagiaire.cpp
         passwordutils.h passwordutils.cpp
+        authentification.h authentification.cpp
+        sallewidget.h sallewidget.cpp
+        formateurwidget.h formateurwidget.cpp
+        courswidget.h courswidget.cpp
+        stagiairewidget.h stagiairewidget.cpp
+        style.qss
+        resources.qrc
+        dashboardwidget.h dashboardwidget.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET centre_formation APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
@@ -48,7 +55,7 @@ else()
     endif()
 endif()
 
-target_link_libraries(centre_formation PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt6::Sql)
+target_link_libraries(centre_formation PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Sql)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an

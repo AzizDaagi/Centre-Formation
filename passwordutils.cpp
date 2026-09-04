@@ -1,13 +1,7 @@
 #include "passwordutils.h"
-
-#include <QCryptographicHash>
+#include "authentification.h"
 
 QString PasswordUtils::hashPassword(const QString& password)
 {
-    QByteArray hash = QCryptographicHash::hash(
-        password.toUtf8(),
-        QCryptographicHash::Sha256
-        );
-
-    return hash.toHex();
+    return Authentification::hashPassword(password);
 }

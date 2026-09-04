@@ -12,13 +12,18 @@ bool Cours::ajouter()
     query.prepare(
         "INSERT INTO COURS "
         "(TITRE, DESCRIPTION, HEURES_REQUISES, ID_FORMATEUR_RESP) "
-        "VALUES (:titre, :description, :heures, :formateur)"
+        "VALUES (:titre, :description, :heures, :formateur) "
+        "RETURNING ID_COURS INTO :out_id"
         );
 
     query.bindValue(":titre", m_titre);
     query.bindValue(":description", m_description);
     query.bindValue(":heures", m_heuresRequises);
-    query.bindValue(":formateur", m_idFormateurResp);
+    if (m_idFormateurResp == -1)
+        query.bindValue(":formateur", QVariant());
+    else
+        query.bindValue(":formateur", m_idFormateurResp);
+    query.bindValue(":out_id", 0, QSql::Out);
 
     if (!query.exec()) {
         qDebug() << "Erreur ajout cours:"
@@ -26,6 +31,7 @@ bool Cours::ajouter()
         return false;
     }
 
+    m_id = query.boundValue(":out_id").toInt();
     return true;
 }
 
@@ -45,7 +51,10 @@ bool Cours::modifier()
     query.bindValue(":titre", m_titre);
     query.bindValue(":description", m_description);
     query.bindValue(":heures", m_heuresRequises);
-    query.bindValue(":formateur", m_idFormateurResp);
+    if (m_idFormateurResp == -1)
+        query.bindValue(":formateur", QVariant());
+    else
+        query.bindValue(":formateur", m_idFormateurResp);
     query.bindValue(":id", m_id);
 
     if (!query.exec()) {

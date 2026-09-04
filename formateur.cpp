@@ -12,7 +12,8 @@ bool Formateur::ajouter()
     query.prepare(
         "INSERT INTO FORMATEUR "
         "(NOM, PRENOM, EMAIL, PASSWORD_HASH, ROLE, STATUT_COMPTE) "
-        "VALUES (:nom, :prenom, :email, :password, :role, :statut)"
+        "VALUES (:nom, :prenom, :email, :password, :role, :statut) "
+        "RETURNING ID_FORMATEUR INTO :out_id"
         );
 
     query.bindValue(":nom", m_nom);
@@ -21,6 +22,7 @@ bool Formateur::ajouter()
     query.bindValue(":password", m_passwordHash);
     query.bindValue(":role", m_role);
     query.bindValue(":statut", m_statutCompte);
+    query.bindValue(":out_id", 0, QSql::Out);
 
     if (!query.exec()) {
         qDebug() << "Erreur ajout formateur:"
@@ -28,6 +30,7 @@ bool Formateur::ajouter()
         return false;
     }
 
+    m_id = query.boundValue(":out_id").toInt();
     return true;
 }
 
@@ -35,21 +38,33 @@ bool Formateur::modifier()
 {
     QSqlQuery query(DB::instance().database());
 
-    query.prepare(
-        "UPDATE FORMATEUR SET "
-        "NOM = :nom, "
-        "PRENOM = :prenom, "
-        "EMAIL = :email, "
-        "PASSWORD_HASH = :password, "
-        "ROLE = :role, "
-        "STATUT_COMPTE = :statut "
-        "WHERE ID_FORMATEUR = :id"
-        );
+    if (m_passwordHash.trimmed().isEmpty()) {
+        query.prepare(
+            "UPDATE FORMATEUR SET "
+            "NOM = :nom, "
+            "PRENOM = :prenom, "
+            "EMAIL = :email, "
+            "ROLE = :role, "
+            "STATUT_COMPTE = :statut "
+            "WHERE ID_FORMATEUR = :id"
+            );
+    } else {
+        query.prepare(
+            "UPDATE FORMATEUR SET "
+            "NOM = :nom, "
+            "PRENOM = :prenom, "
+            "EMAIL = :email, "
+            "PASSWORD_HASH = :password, "
+            "ROLE = :role, "
+            "STATUT_COMPTE = :statut "
+            "WHERE ID_FORMATEUR = :id"
+            );
+        query.bindValue(":password", m_passwordHash);
+    }
 
     query.bindValue(":nom", m_nom);
     query.bindValue(":prenom", m_prenom);
     query.bindValue(":email", m_email);
-    query.bindValue(":password", m_passwordHash);
     query.bindValue(":role", m_role);
     query.bindValue(":statut", m_statutCompte);
     query.bindValue(":id", m_id);

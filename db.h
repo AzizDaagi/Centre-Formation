@@ -8,12 +8,17 @@ class DB {
 public:
     static DB& instance();
     bool connect();
-    QSqlDatabase& database();
+    QSqlDatabase database();
     bool isConnected() const;
+    QString lastError() const;
 
 private:
     DB() = default;
-    QSqlDatabase m_db;
+    ~DB() = default;
+    DB(const DB&) = delete;
+    DB& operator=(const DB&) = delete;
+
+    QString m_lastError;
 };
 
 #endif // DB_H

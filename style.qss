@@ -1,0 +1,208 @@
+/* ============================================================================
+   GLOBAL & MAIN WINDOW BACKGROUND
+   ============================================================================ */
+QMainWindow, QWidget#centralWidget {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                stop:0 #dbece5, stop:0.5 #e2eaf0, stop:1 #d8dbf0);
+    font-family: "Segoe UI", "Inter", sans-serif;
+    color: #1a2b27;
+}
+
+/* ============================================================================
+   SIDEBAR & CONTAINER CARDS
+   ============================================================================ */
+QFrame#sidebar {
+    background: rgba(255, 255, 255, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 20px;
+}
+
+QFrame#glassCard {
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 20px;
+}
+
+/* ============================================================================
+   SIDEBAR NAVIGATION BUTTONS (No focus outline/border)
+   ============================================================================ */
+QFrame#sidebar QPushButton {
+    background-color: transparent;
+    color: #475569;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 16px;
+    text-align: left;
+    outline: none;
+}
+
+QFrame#sidebar QPushButton:focus {
+    outline: none;
+    border: none;
+}
+
+QFrame#sidebar QPushButton:hover {
+    background-color: rgba(15, 118, 110, 0.08);
+    color: #0f766e;
+}
+
+QFrame#sidebar QPushButton:checked,
+QFrame#sidebar QPushButton:checked:focus {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #0d9488, stop:1 #14b8a6);
+    color: #ffffff;
+    font-weight: bold;
+    border: none;
+    outline: none;
+}
+
+/* ============================================================================
+   TABLE WIDGET & SELECTION FEEDBACK
+   ============================================================================ */
+QTableWidget {
+    background-color: rgba(255, 255, 255, 0.55);
+    alternate-background-color: rgba(241, 245, 249, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 14px;
+    gridline-color: transparent;
+    color: #0f172a;
+    font-size: 13px;
+    outline: none;
+}
+
+QHeaderView::section {
+    background-color: transparent;
+    color: #64748b;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    border: none;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 10px;
+}
+
+QTableWidget QTableCornerButton::section {
+    background-color: transparent;
+    border: none;
+}
+
+QHeaderView {
+    background-color: transparent;
+}
+
+QTableWidget::item {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    color: #1e293b;
+    outline: none;
+}
+
+QTableWidget::item:hover {
+    background-color: rgba(20, 184, 166, 0.08);
+}
+
+QTableWidget::item:selected,
+QTableWidget::item:selected:active,
+QTableWidget::item:selected:!active {
+    background-color: #0d9488;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+/* ============================================================================
+   INPUT FIELDS & FORM LABELS
+   ============================================================================ */
+QLabel {
+    color: #1e293b;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+QLineEdit, QSpinBox, QComboBox {
+    background-color: rgba(255, 255, 255, 0.85);
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: #0f172a;
+    font-size: 13px;
+}
+
+QLineEdit:focus, QSpinBox:focus, QComboBox:focus {
+    border: 2px solid #0d9488;
+    background-color: #ffffff;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 24px;
+}
+
+/* ============================================================================
+   PRIMARY & ACTION BUTTONS (Includes #primaryBtn for Login)
+   ============================================================================ */
+QPushButton#primaryBtn,
+QPushButton#btnAjouter,
+QPushButton#btnModifier {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #0d9488, stop:1 #14b8a6);
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 13px;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    outline: none;
+}
+
+QPushButton#primaryBtn:hover,
+QPushButton#btnAjouter:hover,
+QPushButton#btnModifier:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #0f766e, stop:1 #0d9488);
+}
+
+QPushButton#btnSupprimer {
+    background-color: #f43f5e;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 13px;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    outline: none;
+}
+
+QPushButton#btnSupprimer:hover {
+    background-color: #e11d48;
+}
+
+QPushButton#btnVider {
+    background-color: rgba(255, 255, 255, 0.8);
+    color: #334155;
+    font-weight: 600;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 20px;
+    outline: none;
+}
+
+QPushButton#btnVider:hover {
+    background-color: #ffffff;
+}
+/* Disabled actions remain visibly unavailable even when they have an action ID style. */
+QPushButton#primaryBtn:disabled,
+QPushButton#btnAjouter:disabled,
+QPushButton#btnModifier:disabled,
+QPushButton#btnSupprimer:disabled,
+QPushButton:disabled {
+    background-color: rgba(148, 163, 184, 0.18);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: bold;
+}

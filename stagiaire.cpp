@@ -17,17 +17,25 @@ bool Stagiaire::ajouter()
         "DATE_DEBUT, DATE_FIN_PREVUE, HEURES_VALIDEES, STATUT) "
         "VALUES (:nom, :prenom, :email, :password, "
         ":formateur, :cours, :salle, "
-        ":dateDebut, :dateFin, :heures, :statut)"
+        ":dateDebut, :dateFin, :heures, :statut) "
+        "RETURNING ID_STAGIAIRE INTO :out_id"
         );
 
     query.bindValue(":nom", m_nom);
     query.bindValue(":prenom", m_prenom);
     query.bindValue(":email", m_email);
     query.bindValue(":password", m_passwordHash);
-    query.bindValue(":formateur", m_idFormateur);
-    query.bindValue(":cours", m_idCours);
 
-    // Salle is optional in your database.
+    if (m_idFormateur == -1)
+        query.bindValue(":formateur", QVariant());
+    else
+        query.bindValue(":formateur", m_idFormateur);
+
+    if (m_idCours == -1)
+        query.bindValue(":cours", QVariant());
+    else
+        query.bindValue(":cours", m_idCours);
+
     if (m_idSalleAttitree == -1)
         query.bindValue(":salle", QVariant());
     else
@@ -37,6 +45,7 @@ bool Stagiaire::ajouter()
     query.bindValue(":dateFin", m_dateFinPrevue);
     query.bindValue(":heures", m_heuresValidees);
     query.bindValue(":statut", m_statut);
+    query.bindValue(":out_id", 0, QSql::Out);
 
     if (!query.exec()) {
         qDebug() << "Erreur ajout stagiaire:"
@@ -44,6 +53,7 @@ bool Stagiaire::ajouter()
         return false;
     }
 
+    m_id = query.boundValue(":out_id").toInt();
     return true;
 }
 
@@ -71,8 +81,16 @@ bool Stagiaire::modifier()
     query.bindValue(":prenom", m_prenom);
     query.bindValue(":email", m_email);
     query.bindValue(":password", m_passwordHash);
-    query.bindValue(":formateur", m_idFormateur);
-    query.bindValue(":cours", m_idCours);
+
+    if (m_idFormateur == -1)
+        query.bindValue(":formateur", QVariant());
+    else
+        query.bindValue(":formateur", m_idFormateur);
+
+    if (m_idCours == -1)
+        query.bindValue(":cours", QVariant());
+    else
+        query.bindValue(":cours", m_idCours);
 
     if (m_idSalleAttitree == -1)
         query.bindValue(":salle", QVariant());
