@@ -34,6 +34,7 @@ private:
     QTableWidget*   m_tableFormateurs;
     QPushButton*    m_btnAjouter, *m_btnModifier, *m_btnSupprimer;
     QLabel*         m_lblCount, *m_lblFormTitre;
+    class QChartView* m_chart = nullptr;
     QLineEdit*      m_editNom, *m_editPrenom, *m_editEmail, *m_editPassword;
     QComboBox*      m_comboRole, *m_comboStatut;
     QPushButton*    m_btnEnregistrer, *m_btnAnnuler;

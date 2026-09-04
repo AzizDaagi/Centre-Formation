@@ -7,6 +7,8 @@
 #include <QLabel>
 #include <QPushButton>
 
+class RoleWorkspace;
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -23,7 +25,7 @@ private:
 
     // Page factory methods
     QWidget* creerPageConnexion();
-    QWidget* creerDashboardAdmin();
+    QWidget* creerDashboardAdmin(bool superAdmin = false);
     QWidget* creerDashboardFormateur();
     QWidget* creerDashboardStagiaire();
 
@@ -48,8 +50,10 @@ private:
     // Dynamic Header Labels for Dashboards
     QLabel* m_lblWelcomeAdmin;
     QLabel* m_lblBadgeAdmin;
-    QLabel* m_lblWelcomeFormateur;
-    QLabel* m_lblWelcomeStagiaire;
+    QLabel* m_lblWelcomeFormateur = nullptr;
+    QLabel* m_lblWelcomeStagiaire = nullptr;
+    RoleWorkspace* m_formateurWorkspace = nullptr;
+    RoleWorkspace* m_stagiaireWorkspace = nullptr;
 };
 
 #endif // MAINWINDOW_H

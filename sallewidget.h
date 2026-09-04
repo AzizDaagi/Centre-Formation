@@ -40,6 +40,7 @@ private:
     QPushButton*   m_btnModifier;
     QPushButton*   m_btnSupprimer;
     QLabel*        m_lblCount;
+    class QChartView* m_chart = nullptr;
 
     QLabel*        m_lblFormTitre;
     QLineEdit*     m_editNomSalle;

@@ -4,6 +4,8 @@
 #include "cours.h"
 #include "salle.h"
 #include "authentification.h"
+#include "moduletools.h"
+#include <QtCharts/QChartView>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -51,7 +53,11 @@ QWidget* StagiaireWidget::creerPageListe(){
     connect(m_btnAjouter,&QPushButton::clicked,this,&StagiaireWidget::ouvrirFormulaireAjout);
     connect(m_btnModifier,&QPushButton::clicked,this,&StagiaireWidget::ouvrirFormulaireModification);
     connect(m_btnSupprimer,&QPushButton::clicked,this,&StagiaireWidget::supprimerStagiaire);
-    cl->addLayout(hdr); cl->addWidget(m_tableStagiaires); cl->addLayout(bar); lay->addWidget(card); return page;
+    auto *tools=ModuleTools::createMultiCriteriaTools(m_tableStagiaires,{1,4,6},{"nom","cours","statut"});
+    m_chart=new QChartView(); m_chart->setMinimumHeight(210);
+    QPushButton *pdf=new QPushButton("Exporter PDF"); pdf->setObjectName("btnVider"); bar->insertWidget(1,pdf);
+    connect(pdf,&QPushButton::clicked,this,[this]{ ModuleTools::exportTableToPdf(m_tableStagiaires,"Rapport des stagiaires"); });
+    cl->addLayout(hdr); cl->addWidget(tools); cl->addWidget(m_tableStagiaires); cl->addWidget(m_chart); cl->addLayout(bar); lay->addWidget(card); return page;
 }
 QWidget* StagiaireWidget::creerPageFormulaire(){
     QWidget* page=new QWidget(); QVBoxLayout* lay=new QVBoxLayout(page); lay->setContentsMargins(0,0,0,0);
@@ -116,6 +122,7 @@ void StagiaireWidget::rafraichirTable(){
         m_tableStagiaires->setItem(i,6,si);
     }
     m_lblCount->setText(QString::number(list.size())+" stagiaire"+(list.size()>1?"s":""));
+    ModuleTools::updateCategoryChart(m_chart,m_tableStagiaires,6,"Répartition des stagiaires par statut");
     mettreAJourBoutonsListe();
 }
 void StagiaireWidget::afficherListe(){ retourListe(); rafraichirTable(); }

@@ -37,6 +37,7 @@ private:
     QTableWidget*    m_tableStagiaires;
     QPushButton*     m_btnAjouter, *m_btnModifier, *m_btnSupprimer;
     QLabel*          m_lblCount, *m_lblFormTitre;
+    class QChartView* m_chart = nullptr;
     QLineEdit*       m_editNom, *m_editPrenom, *m_editEmail, *m_editPassword;
     QComboBox*       m_comboFormateur, *m_comboCours, *m_comboSalle, *m_comboStatut;
     QDateEdit*       m_dateDebut, *m_dateFin;

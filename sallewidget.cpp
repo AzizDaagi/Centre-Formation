@@ -1,5 +1,7 @@
 #include "sallewidget.h"
 #include "salle.h"
+#include "moduletools.h"
+#include <QtCharts/QChartView>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -77,7 +79,12 @@ QWidget* SalleWidget::creerPageListe() {
     connect(m_btnModifier, &QPushButton::clicked,this,&SalleWidget::ouvrirFormulaireModification);
     connect(m_btnSupprimer,&QPushButton::clicked,this,&SalleWidget::supprimerSalle);
 
-    cl->addLayout(hdr); cl->addWidget(m_tableSalles); cl->addLayout(bar);
+    auto *tools = ModuleTools::createMultiCriteriaTools(m_tableSalles, {1, 3, 4}, {"nom", "type", "statut"});
+    m_chart = new QChartView(); m_chart->setMinimumHeight(210);
+    QPushButton *pdf = new QPushButton("Exporter PDF"); pdf->setObjectName("btnVider");
+    bar->insertWidget(1, pdf);
+    connect(pdf, &QPushButton::clicked, this, [this] { ModuleTools::exportTableToPdf(m_tableSalles, "Rapport des salles"); });
+    cl->addLayout(hdr); cl->addWidget(tools); cl->addWidget(m_tableSalles); cl->addWidget(m_chart); cl->addLayout(bar);
     lay->addWidget(card);
     return page;
 }
@@ -147,6 +154,7 @@ void SalleWidget::rafraichirTable() {
         m_tableSalles->setItem(i,4,si);
     }
     m_lblCount->setText(QString::number(salles.size())+" salle"+(salles.size()>1?"s":""));
+    ModuleTools::updateCategoryChart(m_chart, m_tableSalles, 4, "Répartition des salles par statut");
     mettreAJourBoutonsListe();
 }
 void SalleWidget::afficherListe() {

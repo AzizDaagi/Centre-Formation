@@ -36,6 +36,7 @@ private:
     QTableWidget*   m_tableCours;
     QPushButton*    m_btnAjouter, *m_btnModifier, *m_btnSupprimer;
     QLabel*         m_lblCount, *m_lblFormTitre;
+    class QChartView* m_chart = nullptr;
     QLineEdit*      m_editTitre, *m_editDescription;
     QSpinBox*       m_spinHeures;
     QComboBox*      m_comboFormateur;

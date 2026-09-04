@@ -6,6 +6,7 @@
 #include "stagiairewidget.h"
 #include "authentification.h"
 #include "db.h"
+#include "roleworkspace.h"
 
 // Qt GUI & Layout Headers
 #include <QVBoxLayout>
@@ -42,8 +43,9 @@ void MainWindow::setupUi() {
     // Index 0: Connexion Page
     m_stackPages->addWidget(creerPageConnexion());
 
-    // Index 1: Dashboard Admin
-    m_stackPages->addWidget(creerDashboardAdmin());
+    // Index 1: Super-admin governance, index 2: operations admin.
+    m_stackPages->addWidget(creerDashboardAdmin(true));
+    m_stackPages->addWidget(creerDashboardAdmin(false));
 
     // Index 2: Dashboard Formateur
     m_stackPages->addWidget(creerDashboardFormateur());
@@ -131,12 +133,16 @@ void MainWindow::tenterConnexion() {
 
     mettreAJourContextesUtilisateur();
 
-    if (session.role == UserRole::SUPER_ADMIN || session.role == UserRole::ADMIN) {
+    if (session.role == UserRole::SUPER_ADMIN) {
         m_stackPages->setCurrentIndex(1);
-    } else if (session.role == UserRole::FORMATEUR) {
+    } else if (session.role == UserRole::ADMIN) {
         m_stackPages->setCurrentIndex(2);
-    } else if (session.role == UserRole::STAGIAIRE) {
+    } else if (session.role == UserRole::FORMATEUR) {
+        m_formateurWorkspace->setUser(session.userId, session.prenom, session.nom);
         m_stackPages->setCurrentIndex(3);
+    } else if (session.role == UserRole::STAGIAIRE) {
+        m_stagiaireWorkspace->setUser(session.userId, session.prenom, session.nom);
+        m_stackPages->setCurrentIndex(4);
     } else {
         m_stackPages->setCurrentIndex(1);
     }
@@ -169,7 +175,7 @@ void MainWindow::mettreAJourContextesUtilisateur() {
     }
 }
 
-QWidget* MainWindow::creerDashboardAdmin() {
+QWidget* MainWindow::creerDashboardAdmin(bool superAdmin) {
     QWidget* mainDashboard = new QWidget();
     QHBoxLayout* rootLayout = new QHBoxLayout(mainDashboard);
     rootLayout->setContentsMargins(15, 15, 15, 15);
@@ -190,7 +196,7 @@ QWidget* MainWindow::creerDashboardAdmin() {
     QVBoxLayout* sidebarLayout = new QVBoxLayout(sidebar);
     sidebarLayout->setContentsMargins(10, 15, 10, 15);
 
-    QLabel* lblLogo = new QLabel("<b>CentrePro</b>");
+    QLabel* lblLogo = new QLabel(superAdmin ? "<b>CentrePro<br><small>Gouvernance</small></b>" : "<b>CentrePro<br><small>Opérations</small></b>");
     lblLogo->setObjectName("sidebarTitle");
     sidebarLayout->addWidget(lblLogo);
     sidebarLayout->addSpacing(20);
@@ -213,13 +219,13 @@ QWidget* MainWindow::creerDashboardAdmin() {
     navGroup->setExclusive(true);
     navGroup->addButton(btnTableauDeBord, 0);
     navGroup->addButton(btnSalles, 1);
-    navGroup->addButton(btnFormateurs, 2);
+    if (superAdmin) navGroup->addButton(btnFormateurs, 2);
     navGroup->addButton(btnCours, 3);
     navGroup->addButton(btnStagiaires, 4);
 
     sidebarLayout->addWidget(btnTableauDeBord);
     sidebarLayout->addWidget(btnSalles);
-    sidebarLayout->addWidget(btnFormateurs);
+    if (superAdmin) sidebarLayout->addWidget(btnFormateurs);
     sidebarLayout->addWidget(btnCours);
     sidebarLayout->addWidget(btnStagiaires);
     sidebarLayout->addStretch();
@@ -378,8 +384,8 @@ QWidget* MainWindow::creerDashboardFormateur() {
     QVBoxLayout* mainLayout = new QVBoxLayout(page);
 
     QHBoxLayout* header = new QHBoxLayout();
-    m_lblWelcomeFormateur = new QLabel("<h2>Espace Formateur</h2>", page);
-    header->addWidget(m_lblWelcomeFormateur);
+    QLabel* roleTitle = new QLabel("<h2>CentrePro / Espace Formateur</h2>", page);
+    header->addWidget(roleTitle);
     header->addStretch();
 
     QPushButton* btnLogout = new QPushButton("Déconnexion");
@@ -387,7 +393,8 @@ QWidget* MainWindow::creerDashboardFormateur() {
     header->addWidget(btnLogout);
 
     mainLayout->addLayout(header);
-    mainLayout->addWidget(new QLabel("Bienvenue sur votre espace formateur.", this));
+    m_formateurWorkspace = new RoleWorkspace(RoleWorkspace::Mode::Formateur, page);
+    mainLayout->addWidget(m_formateurWorkspace);
     return page;
 }
 
@@ -396,8 +403,8 @@ QWidget* MainWindow::creerDashboardStagiaire() {
     QVBoxLayout* mainLayout = new QVBoxLayout(page);
 
     QHBoxLayout* header = new QHBoxLayout();
-    m_lblWelcomeStagiaire = new QLabel("<h2>Espace Stagiaire</h2>", page);
-    header->addWidget(m_lblWelcomeStagiaire);
+    QLabel* roleTitle = new QLabel("<h2>CentrePro / Mon apprentissage</h2>", page);
+    header->addWidget(roleTitle);
     header->addStretch();
 
     QPushButton* btnLogout = new QPushButton("Déconnexion");
@@ -405,6 +412,7 @@ QWidget* MainWindow::creerDashboardStagiaire() {
     header->addWidget(btnLogout);
 
     mainLayout->addLayout(header);
-    mainLayout->addWidget(new QLabel("Bienvenue sur votre espace stagiaire.", this));
+    m_stagiaireWorkspace = new RoleWorkspace(RoleWorkspace::Mode::Stagiaire, page);
+    mainLayout->addWidget(m_stagiaireWorkspace);
     return page;
 }

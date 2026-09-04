@@ -1,6 +1,8 @@
 #include "formateurwidget.h"
 #include "formateur.h"
 #include "authentification.h"
+#include "moduletools.h"
+#include <QtCharts/QChartView>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -50,7 +52,11 @@ QWidget* FormateurWidget::creerPageListe(){
     connect(m_btnAjouter,&QPushButton::clicked,this,&FormateurWidget::ouvrirFormulaireAjout);
     connect(m_btnModifier,&QPushButton::clicked,this,&FormateurWidget::ouvrirFormulaireModification);
     connect(m_btnSupprimer,&QPushButton::clicked,this,&FormateurWidget::supprimerFormateur);
-    cl->addLayout(hdr); cl->addWidget(m_tableFormateurs); cl->addLayout(bar); lay->addWidget(card); return page;
+    auto *tools=ModuleTools::createMultiCriteriaTools(m_tableFormateurs,{1,4,5},{"nom","rôle","statut"});
+    m_chart=new QChartView(); m_chart->setMinimumHeight(210);
+    QPushButton *pdf=new QPushButton("Exporter PDF"); pdf->setObjectName("btnVider"); bar->insertWidget(1,pdf);
+    connect(pdf,&QPushButton::clicked,this,[this]{ ModuleTools::exportTableToPdf(m_tableFormateurs,"Rapport des formateurs"); });
+    cl->addLayout(hdr); cl->addWidget(tools); cl->addWidget(m_tableFormateurs); cl->addWidget(m_chart); cl->addLayout(bar); lay->addWidget(card); return page;
 }
 QWidget* FormateurWidget::creerPageFormulaire(){
     QWidget* page=new QWidget(); QVBoxLayout* lay=new QVBoxLayout(page); lay->setContentsMargins(0,0,0,0);
@@ -97,6 +103,7 @@ void FormateurWidget::rafraichirTable(){
         m_tableFormateurs->setItem(i,5,si);
     }
     m_lblCount->setText(QString::number(list.size())+" formateur"+(list.size()>1?"s":""));
+    ModuleTools::updateCategoryChart(m_chart,m_tableFormateurs,4,"Répartition des formateurs par rôle");
     mettreAJourBoutonsListe();
 }
 void FormateurWidget::afficherListe(){ retourListe(); rafraichirTable(); }
