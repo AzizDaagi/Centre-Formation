@@ -38,6 +38,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         dashboardwidget.h dashboardwidget.cpp
         moduletools.h moduletools.cpp
         roleworkspace.h roleworkspace.cpp
+        incidentresolutiondialog.h incidentresolutiondialog.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET centre_formation APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

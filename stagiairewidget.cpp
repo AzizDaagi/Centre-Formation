@@ -4,6 +4,8 @@
 #include "cours.h"
 #include "salle.h"
 #include "authentification.h"
+#include "db.h"
+#include <QSqlQuery>
 #include "moduletools.h"
 #include <QtCharts/QChartView>
 #include <QVBoxLayout>
@@ -167,6 +169,40 @@ void StagiaireWidget::enregistrer(){
     if(m_modeAjout&&pwd.isEmpty()){ m_editPassword->setStyleSheet("border:1.5px solid #f43f5e;border-radius:8px;"); m_editPassword->setPlaceholderText("Mot de passe requis"); valid=false; }
     else m_editPassword->setStyleSheet("");
     if(!valid) return;
+
+    // Double-réservation prevention check
+    int salleId = m_comboSalle->currentData().toInt();
+    if (salleId > 0) {
+        QSqlQuery qOverlap(DB::instance().database());
+        qOverlap.prepare(
+            "SELECT s.NOM, s.PRENOM, c.TITRE, s.DATE_DEBUT, s.DATE_FIN_PREVUE "
+            "FROM STAGIAIRE s "
+            "LEFT JOIN COURS c ON s.ID_COURS = c.ID_COURS "
+            "WHERE s.ID_SALLE_ATTITREE = :salle "
+            "  AND s.ID_STAGIAIRE != :myId "
+            "  AND s.STATUT = 'ACTIF' "
+            "  AND (:dStart <= s.DATE_FIN_PREVUE AND :dEnd >= s.DATE_DEBUT) "
+            "  AND ROWNUM = 1"
+        );
+        qOverlap.bindValue(":salle", salleId);
+        qOverlap.bindValue(":myId", m_modeAjout ? -1 : m_idStagiaireSelectionne);
+        qOverlap.bindValue(":dStart", m_dateDebut->date());
+        qOverlap.bindValue(":dEnd", m_dateFin->date());
+
+        if (qOverlap.exec() && qOverlap.next()) {
+            auto rep = QMessageBox::question(
+                this, "Avertissement Double-réservation Salle",
+                QString("Attention : Cette salle est déjà attribuée à <b>%1 %2</b> pour le cours <i>%3</i> "
+                        "sur la période chevauchante du %4 au %5.<br><br>Voulez-vous tout de même affecter cette salle ?")
+                .arg(qOverlap.value(1).toString(), qOverlap.value(0).toString(), qOverlap.value(2).toString())
+                .arg(qOverlap.value(3).toDate().toString("dd/MM/yyyy"), qOverlap.value(4).toDate().toString("dd/MM/yyyy")),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::No
+            );
+            if (rep == QMessageBox::No) {
+                return;
+            }
+        }
+    }
     if(m_modeAjout){
         Stagiaire s; s.setNom(nom); s.setPrenom(prenom); s.setEmail(email); s.setPasswordHash(Authentification::hashPassword(pwd));
         s.setIdFormateur(m_comboFormateur->currentData().toInt()); s.setIdCours(m_comboCours->currentData().toInt()); s.setIdSalleAttitree(m_comboSalle->currentData().toInt());

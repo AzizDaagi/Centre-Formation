@@ -11,6 +11,7 @@ class QDoubleSpinBox;
 class QLineEdit;
 class QTextEdit;
 class QProgressBar;
+class QPushButton;
 
 class RoleWorkspace : public QWidget {
     Q_OBJECT
@@ -26,10 +27,15 @@ private slots:
     void validerSeanceEtPresences();
     void mettreAJourStatutStagiaire();
     void envoyerSignalementFormateur();
+    void exporterFeuilleEmargementPdf();
 
     // Stagiaire actions
     void soumettreJustificationStagiaire();
     void envoyerSignalementStagiaire();
+    void exporterAttestationFormationPdf();
+
+    // Shared Profile Action
+    void changerMotDePasse();
 
 private:
     void setupUi();
@@ -51,6 +57,7 @@ private:
 
     // Common UI
     QLabel *m_welcome = nullptr;
+    QLabel *m_notificationBanner = nullptr;
     QLabel *m_primaryMetric = nullptr;
     QLabel *m_secondaryMetric = nullptr;
     QLabel *m_tertiaryMetric = nullptr;
@@ -76,6 +83,7 @@ private:
     QLabel *m_lblStagiairePeriode = nullptr;
     QProgressBar *m_barProgression = nullptr;
     QLabel *m_lblProgressionDetail = nullptr;
+    QPushButton *m_btnAttestationPdf = nullptr;
 
     QTextEdit *m_editJustification = nullptr;
     QComboBox *m_comboTypeIncidentStag = nullptr;

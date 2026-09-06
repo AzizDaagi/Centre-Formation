@@ -1,5 +1,6 @@
 #include "roleworkspace.h"
 #include "db.h"
+#include "authentification.h"
 #include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -18,6 +19,13 @@
 #include <QComboBox>
 #include <QDate>
 #include <QVBoxLayout>
+#include <QFileDialog>
+#include <QDir>
+#include <QPdfWriter>
+#include <QPainter>
+#include <QPageSize>
+#include <QDialog>
+#include <QFormLayout>
 
 RoleWorkspace::RoleWorkspace(Mode mode, QWidget *parent)
     : QWidget(parent), m_mode(mode)
@@ -42,24 +50,40 @@ QWidget* RoleWorkspace::createMetricCard(const QString &label, QLabel **value, c
 void RoleWorkspace::setupUi() {
     auto *root = new QVBoxLayout(this);
     root->setContentsMargins(20, 20, 20, 20);
-    root->setSpacing(16);
+    root->setSpacing(14);
 
     // Hero banner
     auto *hero = new QFrame(this);
     hero->setStyleSheet("background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #0f172a,stop:1 #1e3a8a);border-radius:20px;");
     auto *heroLayout = new QVBoxLayout(hero);
-    heroLayout->setContentsMargins(24, 20, 24, 20);
+    heroLayout->setContentsMargins(24, 18, 24, 18);
 
+    auto *topBarHero = new QHBoxLayout();
     m_welcome = new QLabel(hero);
     m_welcome->setStyleSheet("color:white;font-size:20pt;font-weight:800;");
     
+    auto *btnPwd = new QPushButton("🔑  Modifier mon mot de passe", hero);
+    btnPwd->setStyleSheet("background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 6px 14px; font-weight: 600; font-size: 9.5pt;");
+    connect(btnPwd, &QPushButton::clicked, this, &RoleWorkspace::changerMotDePasse);
+
+    topBarHero->addWidget(m_welcome);
+    topBarHero->addStretch();
+    topBarHero->addWidget(btnPwd);
+    heroLayout->addLayout(topBarHero);
+
     auto *description = new QLabel(m_mode == Mode::Formateur 
         ? "Poste de commandement pédagogique : conduite de séance, présences en direct, compétences et escalade d'incidents."
         : "Hub personnel d'apprentissage : avancement en direct, repères de salle, justifications et signalements.", hero);
-    description->setStyleSheet("color:#cbd5e1;font-size:10.5pt;");
-
-    heroLayout->addWidget(m_welcome);
+    description->setStyleSheet("color:#cbd5e1;font-size:10pt;");
     heroLayout->addWidget(description);
+
+    // Notification Banner (Resolutions & Acknowledged Reports)
+    m_notificationBanner = new QLabel(this);
+    m_notificationBanner->setVisible(false);
+    m_notificationBanner->setStyleSheet(
+        "background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; "
+        "border-radius: 10px; padding: 10px 16px; font-weight: 600; font-size: 10pt;"
+    );
 
     // KPI row
     auto *metrics = new QGridLayout();
@@ -74,6 +98,7 @@ void RoleWorkspace::setupUi() {
     }
 
     root->addWidget(hero);
+    root->addWidget(m_notificationBanner);
     root->addLayout(metrics);
 
     // Dynamic Body based on Role
@@ -85,7 +110,7 @@ void RoleWorkspace::setupUi() {
 }
 
 // ============================================================================
-// FORMATEUR WORKSPACE ("The Instructor Command Center")
+// FORMATEUR WORKSPACE
 // ============================================================================
 QWidget* RoleWorkspace::createFormateurWorkspace() {
     auto *tabWidget = new QTabWidget(this);
@@ -144,10 +169,20 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
     m_tablePresences->setAlternatingRowColors(true);
     layoutSession->addWidget(m_tablePresences, 1);
 
+    auto *btnRowSession = new QHBoxLayout();
+    auto *btnPdfSession = new QPushButton("📄  Exporter Feuille d'Émargement PDF", tabSession);
+    btnPdfSession->setObjectName("btnVider");
+    btnPdfSession->setStyleSheet("padding: 10px 18px; font-weight: 600;");
+    connect(btnPdfSession, &QPushButton::clicked, this, &RoleWorkspace::exporterFeuilleEmargementPdf);
+
     auto *btnValidation = new QPushButton("✅  Valider la Séance & Créditer les Heures aux Présents", tabSession);
-    btnValidation->setStyleSheet("background: #0284c7; color: white; font-weight: bold; font-size: 11pt; padding: 12px 24px; border-radius: 10px;");
+    btnValidation->setStyleSheet("background: #0284c7; color: white; font-weight: bold; font-size: 10.5pt; padding: 10px 22px; border-radius: 8px;");
     connect(btnValidation, &QPushButton::clicked, this, &RoleWorkspace::validerSeanceEtPresences);
-    layoutSession->addWidget(btnValidation, 0, Qt::AlignRight);
+
+    btnRowSession->addWidget(btnPdfSession);
+    btnRowSession->addStretch();
+    btnRowSession->addWidget(btnValidation);
+    layoutSession->addLayout(btnRowSession);
 
     tabWidget->addTab(tabSession, "📋 Émargement & Conduite de Séance");
 
@@ -226,7 +261,7 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
 }
 
 // ============================================================================
-// STAGIAIRE PORTAL ("The Learner Hub")
+// STAGIAIRE PORTAL
 // ============================================================================
 QWidget* RoleWorkspace::createStagiaireWorkspace() {
     auto *tabWidget = new QTabWidget(this);
@@ -240,7 +275,7 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
     auto *tabProg = new QWidget();
     auto *layoutProg = new QVBoxLayout(tabProg);
     layoutProg->setContentsMargins(24, 24, 24, 24);
-    layoutProg->setSpacing(20);
+    layoutProg->setSpacing(18);
 
     auto *lblTitleProg = new QLabel("<b>Feuille de Route d'Apprentissage</b>", tabProg);
     lblTitleProg->setStyleSheet("font-size: 14pt; color: #0f172a;");
@@ -282,6 +317,13 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
     gridSummary->addWidget(m_lblStagiairePeriode, 3, 1);
 
     layoutProg->addWidget(cardSummary);
+
+    m_btnAttestationPdf = new QPushButton("🎓  Télécharger mon Attestation de Formation (PDF)", tabProg);
+    m_btnAttestationPdf->setStyleSheet("background: #0f766e; color: white; font-weight: bold; padding: 12px 24px; border-radius: 10px; font-size: 10.5pt;");
+    m_btnAttestationPdf->setEnabled(false);
+    connect(m_btnAttestationPdf, &QPushButton::clicked, this, &RoleWorkspace::exporterAttestationFormationPdf);
+    layoutProg->addWidget(m_btnAttestationPdf, 0, Qt::AlignRight);
+
     layoutProg->addStretch();
     tabWidget->addTab(tabProg, "🚀 Ma Progression & Compétences");
 
@@ -366,6 +408,16 @@ void RoleWorkspace::refresh() {
 // ============================================================================
 void RoleWorkspace::refreshFormateur() {
     QSqlQuery query(DB::instance().database());
+
+    // Notification Banner check: resolved signals submitted by this trainer
+    query.prepare("SELECT COUNT(*) FROM SALLE WHERE REPORT_AUTHOR LIKE :auth AND REPORT_STATUS = 'RESOLU'");
+    query.bindValue(":auth", "%" + m_userFirstName + "%");
+    if (query.exec() && query.next() && query.value(0).toInt() > 0) {
+        m_notificationBanner->setText(QString("🔔 Notification : %1 de vos signalements de salle ont été pris en charge et marqués comme RÉSOLUS par l'administration.").arg(query.value(0).toInt()));
+        m_notificationBanner->setVisible(true);
+    } else {
+        m_notificationBanner->setVisible(false);
+    }
 
     // KPIs
     query.prepare("SELECT COUNT(*), NVL(SUM(HEURES_REQUISES), 0) FROM COURS WHERE ID_FORMATEUR_RESP = :id");
@@ -555,11 +607,106 @@ void RoleWorkspace::envoyerSignalementFormateur() {
     }
 }
 
+void RoleWorkspace::exporterFeuilleEmargementPdf() {
+    QString coursTitre = m_comboFormateurCours->currentText();
+    QString defaultPath = QDir::homePath() + "/Documents/Emargement_" + coursTitre.simplified().replace(' ', '_') + "_" + QDate::currentDate().toString("yyyyMMdd") + ".pdf";
+    QString path = QFileDialog::getSaveFileName(this, "Exporter Feuille d'Émargement", defaultPath, "Fichiers PDF (*.pdf)");
+    if (path.isEmpty()) return;
+    if (!path.endsWith(".pdf", Qt::CaseInsensitive)) path += ".pdf";
+
+    QPdfWriter pdf(path);
+    pdf.setResolution(96);
+    pdf.setPageSize(QPageSize(QPageSize::A4));
+
+    QPainter painter(&pdf);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // Document Header
+    painter.fillRect(35, 30, 525, 60, QColor("#0f172a"));
+    painter.setPen(Qt::white);
+    QFont fTitle = painter.font(); fTitle.setPointSize(14); fTitle.setBold(true); painter.setFont(fTitle);
+    painter.drawText(50, 65, "CENTREPRO — FEUILLE D'ÉMARGEMENT OFFICIELLE");
+
+    painter.setPen(QColor("#0f172a"));
+    QFont fInfo = painter.font(); fInfo.setPointSize(10); fInfo.setBold(false); painter.setFont(fInfo);
+    painter.drawText(35, 115, QString("Module : %1").arg(coursTitre));
+    painter.drawText(35, 135, QString("Formateur : %1 %2").arg(m_userFirstName, m_userLastName));
+    painter.drawText(35, 155, QString("Salle : %1 | Date : %2 | Volume : %3 h").arg(m_lblSalleSession->text(), QDate::currentDate().toString("dd/MM/yyyy"), QString::number(m_spinHeuresSession->value(), 'f', 1)));
+    painter.drawText(35, 175, QString("Thème séance : %1").arg(m_editSujetSession->text().isEmpty() ? "Séance de formation" : m_editSujetSession->text()));
+
+    // Table Header
+    int y = 205;
+    painter.fillRect(35, y, 525, 26, QColor("#0284c7"));
+    painter.setPen(Qt::white);
+    QFont fTh = painter.font(); fTh.setBold(true); fTh.setPointSize(9); painter.setFont(fTh);
+    painter.drawText(45, y + 17, "ID");
+    painter.drawText(90, y + 17, "Nom et Prénom du Stagiaire");
+    painter.drawText(310, y + 17, "Présence");
+    painter.drawText(410, y + 17, "Signature Stagiaire");
+
+    // Table Rows
+    y += 26;
+    QFont fRow = painter.font(); fRow.setBold(false); fRow.setPointSize(9); painter.setFont(fRow);
+    for (int r = 0; r < m_tablePresences->rowCount(); ++r) {
+        painter.fillRect(35, y, 525, 28, r % 2 == 0 ? Qt::white : QColor("#f8fafc"));
+        painter.setPen(QColor("#cbd5e1"));
+        painter.drawRect(35, y, 525, 28);
+
+        painter.setPen(QColor("#0f172a"));
+        painter.drawText(45, y + 18, m_tablePresences->item(r, 0)->text());
+        painter.drawText(90, y + 18, m_tablePresences->item(r, 1)->text());
+
+        auto *combo = qobject_cast<QComboBox*>(m_tablePresences->cellWidget(r, 3));
+        QString pres = combo ? combo->currentText() : "Présent";
+        painter.drawText(310, y + 18, pres);
+
+        // Blank signature box
+        painter.setPen(QColor("#94a3b8"));
+        painter.drawRect(410, y + 4, 130, 20);
+
+        y += 28;
+    }
+
+    // Signatures footer
+    y += 35;
+    painter.setPen(QColor("#0f172a"));
+    painter.drawText(35, y, "Visa & Signature du Formateur :");
+    painter.drawRect(35, y + 10, 200, 50);
+
+    painter.drawText(350, y, "Visa Direction des Études :");
+    painter.drawRect(350, y + 10, 200, 50);
+
+    painter.end();
+    QMessageBox::information(this, "Feuille exportée", "La feuille d'émargement a été enregistrée avec succès :\n" + path);
+}
+
 // ============================================================================
 // DATA LOGIC - STAGIAIRE
 // ============================================================================
 void RoleWorkspace::refreshStagiaire() {
     QSqlQuery query(DB::instance().database());
+
+    // Check acknowledged justifications/reports
+    query.prepare(
+        "SELECT REPORT_STATUS FROM COURS WHERE ID_COURS = "
+        "(SELECT ID_COURS FROM STAGIAIRE WHERE ID_STAGIAIRE = :id) AND REPORT_AUTHOR LIKE :auth"
+    );
+    query.bindValue(":id", m_userId);
+    query.bindValue(":auth", "%" + m_userFirstName + "%");
+    if (query.exec() && query.next()) {
+        QString st = query.value(0).toString();
+        if (st.contains("RESOLU", Qt::CaseInsensitive)) {
+            m_notificationBanner->setText("🔔 Notification : Votre justification d'absence a été VALIDÉE et traitée par l'administration.");
+            m_notificationBanner->setVisible(true);
+        } else if (st.contains("EN_COURS", Qt::CaseInsensitive)) {
+            m_notificationBanner->setText("ℹ Information : Votre justificatif ou signalement est en cours d'examen par le formateur.");
+            m_notificationBanner->setVisible(true);
+        } else {
+            m_notificationBanner->setVisible(false);
+        }
+    } else {
+        m_notificationBanner->setVisible(false);
+    }
 
     query.prepare(
         "SELECT NVL(c.TITRE, 'Non attribué'), "
@@ -603,7 +750,98 @@ void RoleWorkspace::refreshStagiaire() {
             .arg(QString::number(total, 'f', 1))
             .arg(QString::number(restant, 'f', 1))
         );
+
+        // Enable Attestation button if course hours fulfilled or status is DIPLOME
+        bool qualifiesForDiploma = (statut == "DIPLOME") || (total > 0 && done >= total);
+        m_btnAttestationPdf->setEnabled(qualifiesForDiploma);
+        if (qualifiesForDiploma) {
+            m_btnAttestationPdf->setText("🎓  Télécharger mon Attestation de Formation (PDF Éligible)");
+            m_btnAttestationPdf->setStyleSheet("background: #16a34a; color: white; font-weight: bold; padding: 12px 24px; border-radius: 10px; font-size: 10.5pt;");
+        } else {
+            m_btnAttestationPdf->setText(QString("🎓  Attestation de Formation (Disponible à 100%% - Actuel: %1%%)").arg(pct));
+            m_btnAttestationPdf->setStyleSheet("background: #94a3b8; color: white; font-weight: bold; padding: 12px 24px; border-radius: 10px; font-size: 10.5pt;");
+        }
     }
+}
+
+void RoleWorkspace::exporterAttestationFormationPdf() {
+    QString defaultPath = QDir::homePath() + "/Documents/Attestation_" + m_userLastName + "_" + m_userFirstName + ".pdf";
+    QString path = QFileDialog::getSaveFileName(this, "Télécharger mon Attestation", defaultPath, "Fichiers PDF (*.pdf)");
+    if (path.isEmpty()) return;
+    if (!path.endsWith(".pdf", Qt::CaseInsensitive)) path += ".pdf";
+
+    QPdfWriter pdf(path);
+    pdf.setResolution(96);
+    pdf.setPageSize(QPageSize(QPageSize::A4));
+
+    QPainter painter(&pdf);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // Diploma Border Frame
+    painter.setPen(QPen(QColor("#0284c7"), 4));
+    painter.drawRect(20, 20, 555, 780);
+    painter.setPen(QPen(QColor("#0f172a"), 1));
+    painter.drawRect(26, 26, 543, 768);
+
+    // Header Gold Ribbon Banner
+    painter.fillRect(30, 50, 535, 75, QColor("#0f172a"));
+    painter.setPen(QColor("#38bdf8"));
+    QFont fBrand = painter.font(); fBrand.setPointSize(12); fBrand.setBold(true); painter.setFont(fBrand);
+    painter.drawText(QRect(30, 60, 535, 20), Qt::AlignCenter, "RÉPUBLIQUE TUNISIENNE — MINISTÈRE DE LA FORMATION");
+    painter.setPen(Qt::white);
+    QFont fInst = painter.font(); fInst.setPointSize(16); fInst.setBold(true); painter.setFont(fInst);
+    painter.drawText(QRect(30, 85, 535, 30), Qt::AlignCenter, "CENTRE DE FORMATION PROFESSIONNELLE CENTREPRO");
+
+    // Title
+    painter.setPen(QColor("#0f172a"));
+    QFont fCert = painter.font(); fCert.setPointSize(24); fCert.setBold(true); painter.setFont(fCert);
+    painter.drawText(QRect(30, 180, 535, 45), Qt::AlignCenter, "ATTESTATION DE FORMATION");
+
+    painter.setPen(QColor("#64748b"));
+    QFont fSub = painter.font(); fSub.setPointSize(11); fSub.setItalic(true); painter.setFont(fSub);
+    painter.drawText(QRect(30, 225, 535, 25), Qt::AlignCenter, "Le présent document certifie avec succès le parcours d'apprentissage de :");
+
+    // Trainee Name
+    painter.setPen(QColor("#0284c7"));
+    QFont fName = painter.font(); fName.setPointSize(22); fName.setBold(true); painter.setFont(fName);
+    painter.drawText(QRect(30, 275, 535, 40), Qt::AlignCenter, QString("%1 %2").arg(m_userFirstName.toUpper(), m_userLastName.toUpper()));
+
+    // Course & Description
+    painter.setPen(QColor("#0f172a"));
+    QFont fBody = painter.font(); fBody.setPointSize(11); fBody.setBold(false); fBody.setItalic(false); painter.setFont(fBody);
+    QString certText = QString(
+        "A suivi et validé avec assiduité l'ensemble des modules d'enseignement pratique et théorique relatifs à la formation professionnelle :\n\n"
+        "« %1 »\n\n"
+        "Dispense assurée par : %2\n"
+        "Période de déroulement : %3\n"
+        "Volume horaire capitalisé : %4 validées\n"
+        "Statut académique : VALIDÉ & HOMOLOGUÉ"
+    ).arg(m_lblStagiaireCours->text(), m_lblStagiaireFormateur->text(), m_lblStagiairePeriode->text(), m_primaryMetric->text());
+
+    painter.drawText(QRect(65, 340, 465, 220), Qt::AlignLeft | Qt::TextWordWrap, certText);
+
+    // Stamp & Signatures
+    int ySign = 620;
+    painter.setPen(QColor("#0f172a"));
+    QFont fSign = painter.font(); fSign.setPointSize(10); fSign.setBold(true); painter.setFont(fSign);
+    painter.drawText(65, ySign, "Le Formateur Responsable :");
+    painter.drawText(360, ySign, "Le Directeur du Centre :");
+
+    painter.setPen(QColor("#64748b"));
+    painter.drawText(65, ySign + 20, m_lblStagiaireFormateur->text());
+    painter.drawText(360, ySign + 20, "Direction Pédagogique");
+
+    painter.setPen(QColor("#cbd5e1"));
+    painter.drawRect(65, ySign + 30, 150, 45);
+    painter.drawRect(360, ySign + 30, 150, 45);
+
+    painter.setPen(QColor("#94a3b8"));
+    QFont fFoot = painter.font(); fFoot.setPointSize(8); painter.setFont(fFoot);
+    painter.drawText(QRect(30, 755, 535, 20), Qt::AlignCenter, QString("Délivré le %1 — Code vérification : CF-%2-%3")
+                     .arg(QDate::currentDate().toString("dd/MM/yyyy"), QString::number(m_userId), QDate::currentDate().toString("yyyyMM")));
+
+    painter.end();
+    QMessageBox::information(this, "Attestation créée", "Félicitations ! Votre attestation de formation officielle a été générée :\n" + path);
 }
 
 void RoleWorkspace::soumettreJustificationStagiaire() {
@@ -613,7 +851,6 @@ void RoleWorkspace::soumettreJustificationStagiaire() {
         return;
     }
 
-    // Escalate via course report
     QSqlQuery query(DB::instance().database());
     query.prepare(
         "UPDATE COURS SET REPORT_STATUS = 'EN_COURS', "
@@ -628,6 +865,7 @@ void RoleWorkspace::soumettreJustificationStagiaire() {
     if (query.exec()) {
         QMessageBox::information(this, "Justificatif envoyé", "Votre justification d'absence a été transmise à votre formateur.");
         m_editJustification->clear();
+        refreshStagiaire();
     } else {
         QMessageBox::critical(this, "Erreur", "Échec lors de l'envoi de la justification.");
     }
@@ -659,4 +897,81 @@ void RoleWorkspace::envoyerSignalementStagiaire() {
     } else {
         QMessageBox::critical(this, "Erreur", "Échec lors de l'envoi du signalement.");
     }
+}
+
+// ============================================================================
+// SELF-SERVICE PASSWORD CHANGE
+// ============================================================================
+void RoleWorkspace::changerMotDePasse() {
+    QDialog dlg(this);
+    dlg.setWindowTitle("Changement de mot de passe");
+    dlg.resize(380, 220);
+
+    auto *lay = new QVBoxLayout(&dlg);
+    auto *form = new QFormLayout();
+
+    auto *editActuel = new QLineEdit(&dlg); editActuel->setEchoMode(QLineEdit::Password);
+    auto *editNouveau = new QLineEdit(&dlg); editNouveau->setEchoMode(QLineEdit::Password);
+    auto *editConfirmer = new QLineEdit(&dlg); editConfirmer->setEchoMode(QLineEdit::Password);
+
+    form->addRow("Mot de passe actuel :", editActuel);
+    form->addRow("Nouveau mot de passe :", editNouveau);
+    form->addRow("Confirmer le mot de passe :", editConfirmer);
+    lay->addLayout(form);
+
+    auto *btnRow = new QHBoxLayout();
+    auto *btnAnnuler = new QPushButton("Annuler", &dlg);
+    auto *btnValider = new QPushButton("Modifier mon mot de passe", &dlg);
+    btnValider->setStyleSheet("background: #0284c7; color: white; font-weight: bold; padding: 6px 14px; border-radius: 6px;");
+
+    connect(btnAnnuler, &QPushButton::clicked, &dlg, &QDialog::reject);
+    connect(btnValider, &QPushButton::clicked, [&]() {
+        if (editActuel->text().isEmpty() || editNouveau->text().isEmpty()) {
+            QMessageBox::warning(&dlg, "Validation", "Veuillez remplir tous les champs.");
+            return;
+        }
+        if (editNouveau->text() != editConfirmer->text()) {
+            QMessageBox::warning(&dlg, "Validation", "Les nouveaux mots de passe ne correspondent pas.");
+            return;
+        }
+
+        QString hashActuel = Authentification::hashPassword(editActuel->text());
+        QString hashNouveau = Authentification::hashPassword(editNouveau->text());
+
+        QSqlQuery checkQuery(DB::instance().database());
+        if (m_mode == Mode::Formateur) {
+            checkQuery.prepare("SELECT COUNT(*) FROM FORMATEUR WHERE ID_FORMATEUR = :id AND PASSWORD_HASH = :pwd");
+        } else {
+            checkQuery.prepare("SELECT COUNT(*) FROM STAGIAIRE WHERE ID_STAGIAIRE = :id AND PASSWORD_HASH = :pwd");
+        }
+        checkQuery.bindValue(":id", m_userId);
+        checkQuery.bindValue(":pwd", hashActuel);
+
+        if (!checkQuery.exec() || !checkQuery.next() || checkQuery.value(0).toInt() == 0) {
+            QMessageBox::warning(&dlg, "Erreur", "Le mot de passe actuel est incorrect.");
+            return;
+        }
+
+        QSqlQuery updateQuery(DB::instance().database());
+        if (m_mode == Mode::Formateur) {
+            updateQuery.prepare("UPDATE FORMATEUR SET PASSWORD_HASH = :pwd WHERE ID_FORMATEUR = :id");
+        } else {
+            updateQuery.prepare("UPDATE STAGIAIRE SET PASSWORD_HASH = :pwd WHERE ID_STAGIAIRE = :id");
+        }
+        updateQuery.bindValue(":pwd", hashNouveau);
+        updateQuery.bindValue(":id", m_userId);
+
+        if (updateQuery.exec()) {
+            QMessageBox::information(&dlg, "Succès", "Votre mot de passe a été modifié avec succès !");
+            dlg.accept();
+        } else {
+            QMessageBox::critical(&dlg, "Erreur", "Échec lors de la mise à jour du mot de passe.");
+        }
+    });
+
+    btnRow->addWidget(btnAnnuler);
+    btnRow->addWidget(btnValider);
+    lay->addLayout(btnRow);
+
+    dlg.exec();
 }

@@ -7,6 +7,7 @@
 #include "authentification.h"
 #include "db.h"
 #include "roleworkspace.h"
+#include "incidentresolutiondialog.h"
 
 // Qt GUI & Layout Headers
 #include <QVBoxLayout>
@@ -299,65 +300,11 @@ QWidget* MainWindow::creerDashboardAdmin(bool superAdmin) {
         btnSalles->animateClick();
     });
 
-    // Signalements Viewer Dialog
-    connect(dashWidget, &DashboardWidget::navigateToSignalsRequested, this, [this]() {
-        QDialog* dlg = new QDialog(this);
-        dlg->setWindowTitle("Signalements et Anomalies Actives");
-        dlg->resize(700, 400);
-
-        QVBoxLayout* l = new QVBoxLayout(dlg);
-        QLabel* lbl = new QLabel("<h3>⚠️ Signalements Actifs (Salles & Cours)</h3>", dlg);
-        l->addWidget(lbl);
-
-        QTableWidget* table = new QTableWidget(dlg);
-        table->setColumnCount(5);
-        table->setHorizontalHeaderLabels({"Type", "Élément", "Description", "Auteur", "Statut"});
-        table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-        table->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        table->setSelectionBehavior(QAbstractItemView::SelectRows);
-
-        QSqlQuery query(DB::instance().database());
-        query.exec(
-            "SELECT TYPE_OBJET, NOM_OBJET, REPORT_DESCRIPTION, REPORT_AUTHOR, REPORT_STATUS FROM ("
-            "  SELECT 'SALLE' AS TYPE_OBJET, NOM_SALLE AS NOM_OBJET, REPORT_DESCRIPTION, REPORT_AUTHOR, REPORT_STATUS "
-            "  FROM SALLE WHERE REPORT_STATUS IS NOT NULL AND UPPER(TRIM(REPORT_STATUS)) != 'NONE' "
-            "  UNION ALL "
-            "  SELECT 'COURS' AS TYPE_OBJET, TITRE AS NOM_OBJET, REPORT_DESCRIPTION, REPORT_AUTHOR, REPORT_STATUS "
-            "  FROM COURS WHERE REPORT_STATUS IS NOT NULL AND UPPER(TRIM(REPORT_STATUS)) != 'NONE' "
-            ")"
-        );
-
-        int row = 0;
-        while (query.next()) {
-            table->insertRow(row);
-            table->setItem(row, 0, new QTableWidgetItem(query.value(0).toString()));
-            table->setItem(row, 1, new QTableWidgetItem(query.value(1).toString()));
-            table->setItem(row, 2, new QTableWidgetItem(query.value(2).toString()));
-            table->setItem(row, 3, new QTableWidgetItem(query.value(3).toString()));
-            table->setItem(row, 4, new QTableWidgetItem(query.value(4).toString()));
-            row++;
-        }
-
-        if (row == 0) {
-            table->insertRow(0);
-            table->setItem(0, 0, new QTableWidgetItem("Aucun"));
-            table->setItem(0, 1, new QTableWidgetItem("-"));
-            table->setItem(0, 2, new QTableWidgetItem("Aucun signalement actif."));
-            table->setItem(0, 3, new QTableWidgetItem("-"));
-            table->setItem(0, 4, new QTableWidgetItem("OK"));
-        }
-
-        l->addWidget(table);
-
-        QHBoxLayout* btnLay = new QHBoxLayout();
-        btnLay->addStretch();
-        QPushButton* btnFermer = new QPushButton("Fermer", dlg);
-        connect(btnFermer, &QPushButton::clicked, dlg, &QDialog::accept);
-        btnLay->addWidget(btnFermer);
-        l->addLayout(btnLay);
-
-        dlg->exec();
-        dlg->deleteLater();
+    // Signalements & Incident Resolution Center Dialog
+    connect(dashWidget, &DashboardWidget::navigateToSignalsRequested, this, [this, dashWidget]() {
+        IncidentResolutionDialog dlg(this);
+        dlg.exec();
+        dashWidget->refreshDashboard();
     });
 
     // Tab Navigation Logic
