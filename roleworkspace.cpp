@@ -773,72 +773,249 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
     QPdfWriter pdf(path);
     pdf.setResolution(96);
     pdf.setPageSize(QPageSize(QPageSize::A4));
+    pdf.setPageOrientation(QPageLayout::Portrait);
+    pdf.setPageMargins(QMarginsF(0, 0, 0, 0), QPageLayout::Millimeter);
 
     QPainter painter(&pdf);
+    if (!painter.isActive()) {
+        QMessageBox::critical(this, "Erreur PDF", "Impossible de générer le fichier PDF.");
+        return;
+    }
     painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::TextAntialiasing);
 
-    // Diploma Border Frame
-    painter.setPen(QPen(QColor("#0284c7"), 4));
-    painter.drawRect(20, 20, 555, 780);
-    painter.setPen(QPen(QColor("#0f172a"), 1));
-    painter.drawRect(26, 26, 543, 768);
+    const int W = pdf.width();
+    const int H = pdf.height();
 
-    // Header Gold Ribbon Banner
-    painter.fillRect(30, 50, 535, 75, QColor("#0f172a"));
-    painter.setPen(QColor("#38bdf8"));
-    QFont fBrand = painter.font(); fBrand.setPointSize(12); fBrand.setBold(true); painter.setFont(fBrand);
-    painter.drawText(QRect(30, 60, 535, 20), Qt::AlignCenter, "RÉPUBLIQUE TUNISIENNE — MINISTÈRE DE LA FORMATION");
+    // 1. Full Page Background
+    painter.fillRect(0, 0, W, H, QColor("#F8FAFC"));
+
+    // 2. Double Security & Certificate Borders
+    const int marginOuter = 26;
+    painter.setPen(QPen(QColor("#0F172A"), 3));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRect(marginOuter, marginOuter, W - 2 * marginOuter, H - 2 * marginOuter);
+
+    const int marginInner = 36;
+    painter.setPen(QPen(QColor("#0284C7"), 1.5, Qt::DashLine));
+    painter.drawRect(marginInner, marginInner, W - 2 * marginInner, H - 2 * marginInner);
+
+    // Decorative corner accents
+    auto drawCorner = [&](int x, int y, int dx, int dy) {
+        painter.setPen(QPen(QColor("#0F172A"), 3));
+        painter.drawLine(x, y, x + dx * 24, y);
+        painter.drawLine(x, y, x, y + dy * 24);
+    };
+    drawCorner(marginOuter + 6, marginOuter + 6, 1, 1);
+    drawCorner(W - marginOuter - 6, marginOuter + 6, -1, 1);
+    drawCorner(marginOuter + 6, H - marginOuter - 6, 1, -1);
+    drawCorner(W - marginOuter - 6, H - marginOuter - 6, -1, -1);
+
+    // 3. Official Header Ribbon
+    const int headerY = 56;
+    const int headerH = 110;
+    const int bannerX = marginInner + 16;
+    const int bannerW = W - 2 * bannerX;
+
+    painter.fillRect(bannerX, headerY, bannerW, headerH, QColor("#0F172A"));
+
+    // Gold/Cyan accent line beneath ribbon
+    painter.fillRect(bannerX, headerY + headerH, bannerW, 5, QColor("#0284C7"));
+
+    painter.setPen(QColor("#38BDF8"));
+    QFont fGov = painter.font();
+    fGov.setPointSize(11);
+    fGov.setBold(true);
+    fGov.setLetterSpacing(QFont::AbsoluteSpacing, 1.5);
+    painter.setFont(fGov);
+    painter.drawText(QRect(bannerX, headerY + 18, bannerW, 24), Qt::AlignCenter, "RÉPUBLIQUE TUNISIENNE — MINISTÈRE DE L'EMPLOI ET DE LA FORMATION");
+
     painter.setPen(Qt::white);
-    QFont fInst = painter.font(); fInst.setPointSize(16); fInst.setBold(true); painter.setFont(fInst);
-    painter.drawText(QRect(30, 85, 535, 30), Qt::AlignCenter, "CENTRE DE FORMATION PROFESSIONNELLE CENTREPRO");
+    QFont fCenter = painter.font();
+    fCenter.setPointSize(17);
+    fCenter.setBold(true);
+    fCenter.setLetterSpacing(QFont::AbsoluteSpacing, 2.0);
+    painter.setFont(fCenter);
+    painter.drawText(QRect(bannerX, headerY + 48, bannerW, 36), Qt::AlignCenter, "CENTRE DE FORMATION PROFESSIONNELLE CENTREPRO");
 
-    // Title
-    painter.setPen(QColor("#0f172a"));
-    QFont fCert = painter.font(); fCert.setPointSize(24); fCert.setBold(true); painter.setFont(fCert);
-    painter.drawText(QRect(30, 180, 535, 45), Qt::AlignCenter, "ATTESTATION DE FORMATION");
+    painter.setPen(QColor("#94A3B8"));
+    QFont fSubH = painter.font();
+    fSubH.setPointSize(9);
+    fSubH.setBold(false);
+    fSubH.setLetterSpacing(QFont::AbsoluteSpacing, 1.0);
+    painter.setFont(fSubH);
+    painter.drawText(QRect(bannerX, headerY + 84, bannerW, 20), Qt::AlignCenter, "ORGANISME AGRÉÉ ET HOMOLOGUÉ SOUS LE N° 2026/PRO/7841");
 
-    painter.setPen(QColor("#64748b"));
-    QFont fSub = painter.font(); fSub.setPointSize(11); fSub.setItalic(true); painter.setFont(fSub);
-    painter.drawText(QRect(30, 225, 535, 25), Qt::AlignCenter, "Le présent document certifie avec succès le parcours d'apprentissage de :");
+    // 4. Main Certificate Title & Badge
+    int curY = headerY + headerH + 34;
 
-    // Trainee Name
-    painter.setPen(QColor("#0284c7"));
-    QFont fName = painter.font(); fName.setPointSize(22); fName.setBold(true); painter.setFont(fName);
-    painter.drawText(QRect(30, 275, 535, 40), Qt::AlignCenter, QString("%1 %2").arg(m_userFirstName.toUpper(), m_userLastName.toUpper()));
+    painter.setPen(QColor("#0F172A"));
+    QFont fCert = painter.font();
+    fCert.setPointSize(28);
+    fCert.setBold(true);
+    fCert.setLetterSpacing(QFont::AbsoluteSpacing, 2.5);
+    painter.setFont(fCert);
+    painter.drawText(QRect(0, curY, W, 48), Qt::AlignCenter, "ATTESTATION DE FORMATION");
 
-    // Course & Description
-    painter.setPen(QColor("#0f172a"));
-    QFont fBody = painter.font(); fBody.setPointSize(11); fBody.setBold(false); fBody.setItalic(false); painter.setFont(fBody);
-    QString certText = QString(
-        "A suivi et validé avec assiduité l'ensemble des modules d'enseignement pratique et théorique relatifs à la formation professionnelle :\n\n"
-        "« %1 »\n\n"
-        "Dispense assurée par : %2\n"
-        "Période de déroulement : %3\n"
-        "Volume horaire capitalisé : %4 validées\n"
-        "Statut académique : VALIDÉ & HOMOLOGUÉ"
-    ).arg(m_lblStagiaireCours->text(), m_lblStagiaireFormateur->text(), m_lblStagiairePeriode->text(), m_primaryMetric->text());
+    curY += 46;
+    painter.setPen(QColor("#0284C7"));
+    QFont fSubtitle = painter.font();
+    fSubtitle.setPointSize(12);
+    fSubtitle.setBold(true);
+    fSubtitle.setLetterSpacing(QFont::AbsoluteSpacing, 1.0);
+    painter.setFont(fSubtitle);
+    painter.drawText(QRect(0, curY, W, 24), Qt::AlignCenter, "CERTIFICAT DE COMPÉTENCES ET D'ASSIDUITÉ PROFESSIONNELLE");
 
-    painter.drawText(QRect(65, 340, 465, 220), Qt::AlignLeft | Qt::TextWordWrap, certText);
+    // Divider Line
+    curY += 32;
+    painter.setPen(QPen(QColor("#CBD5E1"), 1.2));
+    painter.drawLine(W / 2 - 160, curY, W / 2 + 160, curY);
 
-    // Stamp & Signatures
-    int ySign = 620;
-    painter.setPen(QColor("#0f172a"));
-    QFont fSign = painter.font(); fSign.setPointSize(10); fSign.setBold(true); painter.setFont(fSign);
-    painter.drawText(65, ySign, "Le Formateur Responsable :");
-    painter.drawText(360, ySign, "Le Directeur du Centre :");
+    // 5. Attribution Preamble
+    curY += 26;
+    painter.setPen(QColor("#475569"));
+    QFont fIntro = painter.font();
+    fIntro.setPointSize(12);
+    fIntro.setItalic(true);
+    fIntro.setBold(false);
+    painter.setFont(fIntro);
+    painter.drawText(QRect(0, curY, W, 26), Qt::AlignCenter, "La Direction pédagogique du Centre atteste par la présente que :");
 
-    painter.setPen(QColor("#64748b"));
-    painter.drawText(65, ySign + 20, m_lblStagiaireFormateur->text());
-    painter.drawText(360, ySign + 20, "Direction Pédagogique");
+    // 6. Trainee Full Name Hero
+    curY += 34;
+    const int nameBoxW = W - 2 * (marginInner + 40);
+    const int nameBoxX = (W - nameBoxW) / 2;
+    painter.fillRect(nameBoxX, curY, nameBoxW, 58, QColor("#EFF6FF"));
+    painter.setPen(QPen(QColor("#BFDBFE"), 1));
+    painter.drawRect(nameBoxX, curY, nameBoxW, 58);
 
-    painter.setPen(QColor("#cbd5e1"));
-    painter.drawRect(65, ySign + 30, 150, 45);
-    painter.drawRect(360, ySign + 30, 150, 45);
+    painter.setPen(QColor("#0284C7"));
+    QFont fName = painter.font();
+    fName.setPointSize(22);
+    fName.setBold(true);
+    fName.setLetterSpacing(QFont::AbsoluteSpacing, 1.2);
+    painter.setFont(fName);
+    painter.drawText(QRect(nameBoxX, curY + 6, nameBoxW, 46), Qt::AlignCenter,
+                     QString("%1 %2").arg(m_userFirstName.trimmed().toUpper(), m_userLastName.trimmed().toUpper()));
 
-    painter.setPen(QColor("#94a3b8"));
-    QFont fFoot = painter.font(); fFoot.setPointSize(8); painter.setFont(fFoot);
-    painter.drawText(QRect(30, 755, 535, 20), Qt::AlignCenter, QString("Délivré le %1 — Code vérification : CF-%2-%3")
-                     .arg(QDate::currentDate().toString("dd/MM/yyyy"), QString::number(m_userId), QDate::currentDate().toString("yyyyMM")));
+    // 7. Course & Comprehensive Narrative
+    curY += 76;
+    painter.setPen(QColor("#0F172A"));
+    QFont fBody = painter.font();
+    fBody.setPointSize(11.5);
+    fBody.setBold(false);
+    fBody.setItalic(false);
+    painter.setFont(fBody);
+
+    const int contentMarginX = marginInner + 40;
+    const int contentW = W - 2 * contentMarginX;
+
+    QString descLine = QString(
+        "A suivi avec succès l'ensemble du cycle d'apprentissage théorique et pratique correspondant au parcours qualifiant "
+        "dénommé ci-après, sanctionné par un contrôle continu et une validation des compétences acquises :"
+    );
+    painter.drawText(QRect(contentMarginX, curY, contentW, 54), Qt::AlignLeft | Qt::TextWordWrap, descLine);
+
+    curY += 60;
+    // Course Highlight Card
+    painter.fillRect(contentMarginX, curY, contentW, 52, QColor("#FFFFFF"));
+    painter.setPen(QPen(QColor("#E2E8F0"), 1.2));
+    painter.drawRect(contentMarginX, curY, contentW, 52);
+    painter.fillRect(contentMarginX, curY, 6, 52, QColor("#0284C7"));
+
+    painter.setPen(QColor("#0F172A"));
+    QFont fCourse = painter.font();
+    fCourse.setPointSize(14);
+    fCourse.setBold(true);
+    painter.setFont(fCourse);
+    painter.drawText(QRect(contentMarginX + 22, curY + 11, contentW - 35, 30), Qt::AlignVCenter | Qt::AlignLeft,
+                     QString("Module : %1").arg(m_lblStagiaireCours->text()));
+
+    // 8. Key Operational Metrics Grid
+    curY += 68;
+    const int gridH = 110;
+    painter.fillRect(contentMarginX, curY, contentW, gridH, QColor("#FFFFFF"));
+    painter.setPen(QPen(QColor("#E2E8F0"), 1));
+    painter.drawRect(contentMarginX, curY, contentW, gridH);
+
+    QFont fGridLabel = painter.font(); fGridLabel.setPointSize(10); fGridLabel.setBold(true);
+    QFont fGridVal = painter.font(); fGridVal.setPointSize(10); fGridVal.setBold(false);
+
+    int row1Y = curY + 18;
+    int row2Y = curY + 48;
+    int row3Y = curY + 78;
+    int col1X = contentMarginX + 18;
+    int col2X = contentMarginX + contentW / 2 + 10;
+
+    // Col 1
+    painter.setFont(fGridLabel); painter.setPen(QColor("#0F172A"));
+    painter.drawText(col1X, row1Y, "• Formateur responsable :");
+    painter.setFont(fGridVal); painter.setPen(QColor("#334155"));
+    painter.drawText(col1X + 170, row1Y, m_lblStagiaireFormateur->text());
+
+    painter.setFont(fGridLabel); painter.setPen(QColor("#0F172A"));
+    painter.drawText(col1X, row2Y, "• Salle & Atelier d'affectation :");
+    painter.setFont(fGridVal); painter.setPen(QColor("#334155"));
+    painter.drawText(col1X + 170, row2Y, m_lblStagiaireSalle->text());
+
+    painter.setFont(fGridLabel); painter.setPen(QColor("#0F172A"));
+    painter.drawText(col1X, row3Y, "• Statut de diplomation :");
+    painter.setFont(fGridVal); painter.setPen(QColor("#16A34A"));
+    painter.drawText(col1X + 170, row3Y, "PARCOURS VALIDÉ & HOMOLOGUÉ");
+
+    // Col 2
+    painter.setFont(fGridLabel); painter.setPen(QColor("#0F172A"));
+    painter.drawText(col2X, row1Y, "• Période d'études :");
+    painter.setFont(fGridVal); painter.setPen(QColor("#334155"));
+    painter.drawText(col2X + 140, row1Y, m_lblStagiairePeriode->text());
+
+    painter.setFont(fGridLabel); painter.setPen(QColor("#0F172A"));
+    painter.drawText(col2X, row2Y, "• Volume horaire certifié :");
+    painter.setFont(fGridVal); painter.setPen(QColor("#0284C7"));
+    painter.drawText(col2X + 140, row2Y, QString("%1 validées").arg(m_primaryMetric->text()));
+
+    painter.setFont(fGridLabel); painter.setPen(QColor("#0F172A"));
+    painter.drawText(col2X, row3Y, "• Taux d'assiduité :");
+    painter.setFont(fGridVal); painter.setPen(QColor("#334155"));
+    painter.drawText(col2X + 140, row3Y, "100% Conforme");
+
+    // 9. Official Signature & Stamp Zone
+    curY += gridH + 36;
+    const int boxW = (contentW - 36) / 2;
+    const int signBoxH = 100;
+
+    auto drawSignatureBox = [&](int x, int y, const QString &role, const QString &signer, const QString &org) {
+        painter.fillRect(x, y, boxW, signBoxH, QColor("#FFFFFF"));
+        painter.setPen(QPen(QColor("#CBD5E1"), 1));
+        painter.drawRect(x, y, boxW, signBoxH);
+
+        painter.setPen(QColor("#0F172A"));
+        QFont fR = painter.font(); fR.setPointSize(10); fR.setBold(true); painter.setFont(fR);
+        painter.drawText(QRect(x + 12, y + 10, boxW - 24, 20), Qt::AlignLeft, role);
+
+        painter.setPen(QColor("#64748B"));
+        QFont fS = painter.font(); fS.setPointSize(9); fS.setBold(false); painter.setFont(fS);
+        painter.drawText(QRect(x + 12, y + 28, boxW - 24, 18), Qt::AlignLeft, signer);
+        painter.drawText(QRect(x + 12, y + 44, boxW - 24, 18), Qt::AlignLeft, org);
+
+        // Security Stamp Simulation Stamp
+        painter.setPen(QPen(QColor("#0284C7"), 1.2, Qt::SolidLine));
+        painter.drawEllipse(x + boxW - 74, y + 20, 60, 60);
+        QFont fStamp = painter.font(); fStamp.setPointSize(6.5); fStamp.setBold(true); painter.setFont(fStamp);
+        painter.drawText(QRect(x + boxW - 74, y + 36, 60, 28), Qt::AlignCenter, "CENTREPRO\nCACHE OFFICIEL");
+    };
+
+    drawSignatureBox(contentMarginX, curY, "Visa du Formateur Responsable", m_lblStagiaireFormateur->text(), "Pôle Ingénierie Pédagogique");
+    drawSignatureBox(contentMarginX + boxW + 36, curY, "Visa de la Direction du Centre", "Direction des Certifications", "Centre de Formation Professionnelle");
+
+    // 10. Security Verification Footer
+    const int footerY = H - marginOuter - 40;
+    painter.setPen(QColor("#94A3B8"));
+    QFont fFoot = painter.font(); fFoot.setPointSize(8.5); fFoot.setBold(false); painter.setFont(fFoot);
+    QString codeVerification = QString("CF-CERT-%1-%2").arg(QString::number(m_userId), QDate::currentDate().toString("yyyyMMdd"));
+    painter.drawText(QRect(0, footerY, W, 18), Qt::AlignCenter,
+                     QString("Attestation délivrée à Tunis le %1  |  Identifiant d'homologation : %2  |  Document faisant foi")
+                     .arg(QDate::currentDate().toString("dd MMMM yyyy"), codeVerification));
 
     painter.end();
     QMessageBox::information(this, "Attestation créée", "Félicitations ! Votre attestation de formation officielle a été générée :\n" + path);

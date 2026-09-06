@@ -66,8 +66,8 @@ UserSession Authentification::authentifier(const QString& email, const QString& 
 
     if (queryStagiaire.exec() && queryStagiaire.next()) {
         QString statut = queryStagiaire.value("STATUT").toString().trimmed().toUpper();
-        if (statut != "ACTIF") {
-            qWarning() << "[AUTH WARN] Stagiaire account is not active (" << statut << "):" << cleanedEmail;
+        if (statut != "ACTIF" && statut != "DIPLOME") {
+            qWarning() << "[AUTH WARN] Stagiaire account is not active or graduated (" << statut << "):" << cleanedEmail;
             return session;
         }
 
