@@ -31,4 +31,4 @@ private:
     QTextEdit *m_detailDescription;
 };
 
-#endif // INCIDENTRESOLUTIONDIALOG_H
+#endif 

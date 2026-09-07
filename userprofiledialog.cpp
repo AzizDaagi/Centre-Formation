@@ -26,7 +26,7 @@ void UserProfileDialog::setupUi() {
     root->setContentsMargins(24, 24, 24, 24);
     root->setSpacing(16);
 
-    // Hero Profile Header
+    
     auto *headerCard = new QFrame(this);
     headerCard->setStyleSheet("background: #0f172a; border-radius: 14px; padding: 14px;");
     auto *headerLay = new QHBoxLayout(headerCard);
@@ -49,7 +49,7 @@ void UserProfileDialog::setupUi() {
     headerLay->addStretch();
     root->addWidget(headerCard);
 
-    // Form 1: Identity info
+    
     auto *boxInfo = new QFrame(this);
     boxInfo->setStyleSheet("background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px;");
     auto *formInfo = new QFormLayout(boxInfo);
@@ -64,7 +64,7 @@ void UserProfileDialog::setupUi() {
     formInfo->addRow("Email :", m_editEmail);
     root->addWidget(boxInfo);
 
-    // Form 2: Password change (optional)
+    
     auto *boxPwd = new QFrame(this);
     boxPwd->setStyleSheet("background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px;");
     auto *formPwd = new QFormLayout(boxPwd);
@@ -91,7 +91,7 @@ void UserProfileDialog::setupUi() {
     formPwd->addRow("Confirmation :", m_editPwdConfirmer);
     root->addWidget(boxPwd);
 
-    // Buttons
+    
     auto *btnRow = new QHBoxLayout();
     auto *btnAnnuler = new QPushButton("Annuler", this);
     btnAnnuler->setObjectName("btnVider");
@@ -150,7 +150,7 @@ void UserProfileDialog::enregistrerModifications() {
             return;
         }
 
-        // Verify current password
+        
         QString hashActuel = Authentification::hashPassword(m_editPwdActuel->text());
         QSqlQuery checkQ(DB::instance().database());
         if (m_type == UserType::Admin || m_type == UserType::Formateur) {

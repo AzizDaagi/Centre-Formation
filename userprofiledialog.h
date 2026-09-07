@@ -36,4 +36,4 @@ private:
     QLineEdit *m_editPwdConfirmer;
 };
 
-#endif // USERPROFILEDIALOG_H
+#endif 

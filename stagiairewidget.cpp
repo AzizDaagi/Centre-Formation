@@ -80,13 +80,26 @@ QWidget* StagiaireWidget::creerPageFormulaire(){
     m_editEmail=new QLineEdit(); m_editEmail->setPlaceholderText("stagiaire@centre.tn");
     m_editPassword=new QLineEdit(); m_editPassword->setEchoMode(QLineEdit::Password); m_editPassword->setPlaceholderText("Mot de passe");
     m_comboFormateur=new QComboBox(); m_comboCours=new QComboBox(); m_comboSalle=new QComboBox(); rafraichirCombos();
+    m_comboCours->setMinimumWidth(260);
+    m_comboFormateur->setMinimumWidth(260);
+    connect(m_comboCours, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
+        if (index < 0) return;
+        const int courseId = m_comboCours->itemData(index).toInt();
+        if (courseId <= 0) return;
+        const Cours course = Cours::trouverParId(courseId);
+        const int trainerIndex = m_comboFormateur->findData(course.idFormateurResp());
+        if (trainerIndex >= 0) m_comboFormateur->setCurrentIndex(trainerIndex);
+    });
     m_dateDebut=new QDateEdit(QDate::currentDate()); m_dateDebut->setCalendarPopup(true);
     m_dateFin=new QDateEdit(QDate::currentDate().addMonths(3)); m_dateFin->setCalendarPopup(true);
     m_spinHeures=new QDoubleSpinBox(); m_spinHeures->setRange(0,5000); m_spinHeures->setValue(0); m_spinHeures->setSuffix("  h");
     m_comboStatut=new QComboBox(); m_comboStatut->addItems({"ACTIF","SUSPENDU","DIPLOME","ABANDON"});
     form->addRow("Nom *:",m_editNom); form->addRow("Prenom *:",m_editPrenom); form->addRow("Email *:",m_editEmail);
     form->addRow("Mot de passe:",m_editPassword); form->addRow("Formateur tuteur:",m_comboFormateur);
-    form->addRow("Cours inscrit:",m_comboCours); form->addRow("Salle attitree:",m_comboSalle);
+    auto *courseNote = new QLabel("Le formateur responsable du cours sera sélectionné automatiquement.");
+    courseNote->setStyleSheet("color:#64748b;font-size:10pt;font-weight:normal;");
+    form->addRow("Cours inscrit:",m_comboCours); form->addRow("",courseNote);
+    form->addRow("Salle attitree:",m_comboSalle);
     form->addRow("Date debut:",m_dateDebut); form->addRow("Date fin prevue:",m_dateFin);
     form->addRow("Heures validees:",m_spinHeures); form->addRow("Statut:",m_comboStatut);
     scroll->setWidget(fw);
@@ -179,7 +192,7 @@ void StagiaireWidget::enregistrer(){
     else m_editPassword->setStyleSheet("");
     if(!valid) return;
 
-    // Double-réservation prevention check
+    
     int salleId = m_comboSalle->currentData().toInt();
     if (salleId > 0) {
         QSqlQuery qOverlap(DB::instance().database());

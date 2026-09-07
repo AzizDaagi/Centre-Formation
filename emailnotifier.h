@@ -15,4 +15,4 @@ public:
                                      const QString &status);
 };
 
-#endif // EMAILNOTIFIER_H
+#endif 

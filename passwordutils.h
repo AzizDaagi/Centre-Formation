@@ -9,4 +9,4 @@ public:
     static QString hashPassword(const QString& password);
 };
 
-#endif // PASSWORDUTILS_H
+#endif 

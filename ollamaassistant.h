@@ -9,4 +9,4 @@ public:
     static QString ask(const QString &prompt, QString *errorMessage = nullptr);
 };
 
-#endif // OLLAMAASSISTANT_H
+#endif 

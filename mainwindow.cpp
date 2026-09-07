@@ -11,7 +11,7 @@
 #include "userprofiledialog.h"
 #include "moduletools.h"
 
-// Qt GUI & Layout Headers
+
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -39,17 +39,17 @@ MainWindow::MainWindow(QWidget *parent)
 void MainWindow::setupUi() {
     m_stackPages = new QStackedWidget(this);
 
-    // Index 0: Connexion Page
+    
     m_stackPages->addWidget(creerPageConnexion());
 
-    // Index 1: Super-admin governance, index 2: operations admin.
+    
     m_stackPages->addWidget(creerDashboardAdmin(true));
     m_stackPages->addWidget(creerDashboardAdmin(false));
 
-    // Index 2: Dashboard Formateur
+    
     m_stackPages->addWidget(creerDashboardFormateur());
 
-    // Index 3: Dashboard Stagiaire
+    
     m_stackPages->addWidget(creerDashboardStagiaire());
 
     setCentralWidget(m_stackPages);
@@ -180,7 +180,7 @@ QWidget* MainWindow::creerDashboardAdmin(bool superAdmin) {
     rootLayout->setContentsMargins(15, 15, 15, 15);
     rootLayout->setSpacing(15);
 
-    // --- 1. LEFT SIDEBAR ---
+    
     QFrame* sidebar = new QFrame();
     sidebar->setObjectName("sidebar");
     sidebar->setFixedWidth(220);
@@ -224,13 +224,13 @@ QWidget* MainWindow::creerDashboardAdmin(bool superAdmin) {
     navGroup->setExclusive(true);
     navGroup->addButton(btnTableauDeBord, 0);
     navGroup->addButton(btnSalles, 1);
-    if (superAdmin) navGroup->addButton(btnFormateurs, 2);
+    navGroup->addButton(btnFormateurs, 2);
     navGroup->addButton(btnCours, 3);
     navGroup->addButton(btnStagiaires, 4);
 
     sidebarLayout->addWidget(btnTableauDeBord);
     sidebarLayout->addWidget(btnSalles);
-    if (superAdmin) sidebarLayout->addWidget(btnFormateurs);
+    sidebarLayout->addWidget(btnFormateurs);
     sidebarLayout->addWidget(btnCours);
     sidebarLayout->addWidget(btnStagiaires);
     sidebarLayout->addStretch();
@@ -238,11 +238,11 @@ QWidget* MainWindow::creerDashboardAdmin(bool superAdmin) {
 
     connect(btnLogout, &QPushButton::clicked, this, &MainWindow::deconnecter);
 
-    // --- 2. RIGHT MAIN CONTENT AREA ---
+    
     QVBoxLayout* rightContentLayout = new QVBoxLayout();
     rightContentLayout->setSpacing(15);
 
-    // Top Header Bar
+    
     QFrame* topHeader = new QFrame();
     topHeader->setObjectName("glassCard");
     topHeader->setAttribute(Qt::WA_StyledBackground, true);
@@ -274,30 +274,30 @@ QWidget* MainWindow::creerDashboardAdmin(bool superAdmin) {
 
     headerLayout->addWidget(m_lblBadgeAdmin);
 
-    // Module Views Stack
+    
     QStackedWidget* moduleStack = new QStackedWidget();
 
-    // Module 0: Standalone Consolidated Dashboard Widget
+    
     DashboardWidget* dashWidget = new DashboardWidget(this);
     moduleStack->addWidget(dashWidget);
 
-    // Module 1: Salles Management Module
+    
     SalleWidget* salleWidget = new SalleWidget(this);
     moduleStack->addWidget(salleWidget);
 
-    // Module 2: Formateurs Management Module
-    FormateurWidget* formateurWidget = new FormateurWidget(this);
+    
+    FormateurWidget* formateurWidget = new FormateurWidget(superAdmin, this);
     moduleStack->addWidget(formateurWidget);
 
-    // Module 3: Cours Management Module
+    
     CoursWidget* coursWidget = new CoursWidget(this);
     moduleStack->addWidget(coursWidget);
 
-    // Module 4: Stagiaires Management Module
+    
     StagiaireWidget* stagiaireWidget = new StagiaireWidget(this);
     moduleStack->addWidget(stagiaireWidget);
 
-    // --- DASHBOARD SHORTCUT ROUTING ---
+    
     connect(dashWidget, &DashboardWidget::addRoomRequested, this, [btnSalles, salleWidget]() {
         btnSalles->click();
         salleWidget->afficherFormulaireAjout();
@@ -312,14 +312,14 @@ QWidget* MainWindow::creerDashboardAdmin(bool superAdmin) {
         btnSalles->animateClick();
     });
 
-    // Signalements & Incident Resolution Center Dialog
+    
     connect(dashWidget, &DashboardWidget::navigateToSignalsRequested, this, [this, dashWidget]() {
         IncidentResolutionDialog dlg(this);
         dlg.exec();
         dashWidget->refreshDashboard();
     });
 
-    // Tab Navigation Logic
+    
     connect(navGroup, &QButtonGroup::idClicked, moduleStack, [moduleStack, dashWidget, salleWidget, formateurWidget, coursWidget, stagiaireWidget](int id) {
         if (id == 0) dashWidget->refreshDashboard();
         else if (id == 1) salleWidget->afficherListe();

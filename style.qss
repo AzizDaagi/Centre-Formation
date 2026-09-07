@@ -1,6 +1,6 @@
-/* ============================================================================
-   GLOBAL & MAIN WINDOW BACKGROUND
-   ============================================================================ */
+
+
+
 QMainWindow, QWidget#centralWidget {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
                                 stop:0 #dbece5, stop:0.5 #e2eaf0, stop:1 #d8dbf0);
@@ -8,9 +8,9 @@ QMainWindow, QWidget#centralWidget {
     color: #1a2b27;
 }
 
-/* ============================================================================
-   SIDEBAR & CONTAINER CARDS
-   ============================================================================ */
+
+
+
 QFrame#sidebar {
     background: rgba(255, 255, 255, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.6);
@@ -23,9 +23,9 @@ QFrame#glassCard {
     border-radius: 20px;
 }
 
-/* ============================================================================
-   SIDEBAR NAVIGATION BUTTONS (No focus outline/border)
-   ============================================================================ */
+
+
+
 QFrame#sidebar QPushButton {
     background-color: transparent;
     color: #475569;
@@ -58,9 +58,9 @@ QFrame#sidebar QPushButton:checked:focus {
     outline: none;
 }
 
-/* ============================================================================
-   TABLE WIDGET & SELECTION FEEDBACK
-   ============================================================================ */
+
+
+
 QTableWidget {
     background-color: rgba(255, 255, 255, 0.55);
     alternate-background-color: rgba(241, 245, 249, 0.78);
@@ -111,9 +111,9 @@ QTableWidget::item:selected:!active {
     font-weight: bold;
 }
 
-/* ============================================================================
-   INPUT FIELDS & FORM LABELS
-   ============================================================================ */
+
+
+
 QLabel {
     color: #1e293b;
     font-weight: 600;
@@ -215,9 +215,9 @@ QComboBox QAbstractItemView::item:selected {
     color: #ffffff;
 }
 
-/* ============================================================================
-   PRIMARY & ACTION BUTTONS (Includes #primaryBtn for Login)
-   ============================================================================ */
+
+
+
 QPushButton#primaryBtn,
 QPushButton#btnAjouter,
 QPushButton#btnModifier {
@@ -268,7 +268,7 @@ QPushButton#btnVider {
 QPushButton#btnVider:hover {
     background-color: #ffffff;
 }
-/* Disabled actions remain visibly unavailable even when they have an action ID style. */
+
 QPushButton#primaryBtn:disabled,
 QPushButton#btnAjouter:disabled,
 QPushButton#btnModifier:disabled,
@@ -284,9 +284,9 @@ QPushButton:disabled {
 }
 
 
-/* ============================================================================
-   MODERN DIALOGS & POPUPS (Crisp White & High-Contrast Deep Navy Text)
-   ============================================================================ */
+
+
+
 QDialog, QMessageBox, QFileDialog {
     background-color: #ffffff;
     color: #0f172a;

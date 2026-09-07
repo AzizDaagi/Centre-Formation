@@ -26,7 +26,7 @@ UserSession Authentification::authentifier(const QString& email, const QString& 
         return session;
     }
 
-    // 1. Authenticate against FORMATEUR table
+    
     QSqlQuery queryFormateur;
     queryFormateur.prepare(
         "SELECT ID_FORMATEUR, NOM, PRENOM, EMAIL, ROLE, STATUT_COMPTE "
@@ -54,7 +54,7 @@ UserSession Authentification::authentifier(const QString& email, const QString& 
         return session;
     }
 
-    // 2. Authenticate against STAGIAIRE table
+    
     QSqlQuery queryStagiaire;
     queryStagiaire.prepare(
         "SELECT ID_STAGIAIRE, NOM, PRENOM, EMAIL, STATUT "

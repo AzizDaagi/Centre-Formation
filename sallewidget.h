@@ -60,4 +60,4 @@ private:
     bool m_modeAjout = true;
 };
 
-#endif // SALLEWIDGET_H
+#endif 

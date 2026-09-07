@@ -32,4 +32,4 @@ public:
     static UserRole stringToRole(const QString& roleStr);
 };
 
-#endif // AUTHENTIFICATION_H
+#endif 

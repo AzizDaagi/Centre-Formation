@@ -1,5 +1,6 @@
 #include "formateurwidget.h"
 #include "formateur.h"
+#include "cours.h"
 #include "authentification.h"
 #include "moduletools.h"
 #include <QtCharts/QChartView>
@@ -18,7 +19,7 @@ static QFrame* makeCardF(){
     return c;
 }
 
-FormateurWidget::FormateurWidget(QWidget *parent):QWidget(parent){
+FormateurWidget::FormateurWidget(bool superAdmin, QWidget *parent):QWidget(parent), m_superAdmin(superAdmin){
     setAttribute(Qt::WA_StyledBackground,true); setupUi(); rafraichirTable();
 }
 void FormateurWidget::setupUi(){
@@ -74,10 +75,20 @@ QWidget* FormateurWidget::creerPageFormulaire(){
     m_editPrenom=new QLineEdit(); m_editPrenom->setPlaceholderText("Prenom");
     m_editEmail=new QLineEdit(); m_editEmail->setPlaceholderText("exemple@centre.tn");
     m_editPassword=new QLineEdit(); m_editPassword->setEchoMode(QLineEdit::Password); m_editPassword->setPlaceholderText("Mot de passe");
-    m_comboRole=new QComboBox(); m_comboRole->addItems({"FORMATEUR","ADMIN","SUPER_ADMIN"});
+    m_comboRole=new QComboBox();
+    m_comboRole->addItem("FORMATEUR");
+    if(m_superAdmin) m_comboRole->addItems({"ADMIN","SUPER_ADMIN"});
     m_comboStatut=new QComboBox(); m_comboStatut->addItems({"ACTIF","INACTIF"});
+    m_listCours=new QListWidget();
+    m_listCours->setSelectionMode(QAbstractItemView::MultiSelection);
+    m_listCours->setMaximumHeight(120);
+    for(const auto& c:Cours::listerTout()){
+        auto* item=new QListWidgetItem(c.titre(), m_listCours);
+        item->setData(Qt::UserRole, c.id());
+    }
     form->addRow("Nom *:",m_editNom); form->addRow("Prenom *:",m_editPrenom); form->addRow("Email *:",m_editEmail);
     form->addRow("Mot de passe:",m_editPassword); form->addRow("Role:",m_comboRole); form->addRow("Statut:",m_comboStatut);
+    form->addRow("Cours assignes:",m_listCours);
     QHBoxLayout* btnRow=new QHBoxLayout(); btnRow->setSpacing(10);
     m_btnEnregistrer=new QPushButton("Enregistrer"); m_btnAnnuler=new QPushButton("Annuler");
     m_btnEnregistrer->setObjectName("btnAjouter"); m_btnAnnuler->setObjectName("btnVider");
@@ -89,20 +100,26 @@ QWidget* FormateurWidget::creerPageFormulaire(){
     lay->addWidget(card); return page;
 }
 void FormateurWidget::rafraichirTable(){
-    QList<Formateur> list=Formateur::listerTout(); m_tableFormateurs->setRowCount(0);
+    QList<Formateur> list;
+    for(const auto& formateur:Formateur::listerTout()){
+        if(m_superAdmin || formateur.role()=="FORMATEUR") list.append(formateur);
+    }
+    m_tableFormateurs->setRowCount(0);
     for(int i=0;i<list.size();++i){
-        const Formateur& f=list[i]; m_tableFormateurs->insertRow(i);
-        m_tableFormateurs->setItem(i,0,new QTableWidgetItem(QString::number(f.id())));
-        m_tableFormateurs->setItem(i,1,new QTableWidgetItem(f.nom()));
-        m_tableFormateurs->setItem(i,2,new QTableWidgetItem(f.prenom()));
-        m_tableFormateurs->setItem(i,3,new QTableWidgetItem(f.email()));
+        const Formateur& f=list[i];
+        const int row=m_tableFormateurs->rowCount();
+        m_tableFormateurs->insertRow(row);
+        m_tableFormateurs->setItem(row,0,new QTableWidgetItem(QString::number(f.id())));
+        m_tableFormateurs->setItem(row,1,new QTableWidgetItem(f.nom()));
+        m_tableFormateurs->setItem(row,2,new QTableWidgetItem(f.prenom()));
+        m_tableFormateurs->setItem(row,3,new QTableWidgetItem(f.email()));
         QTableWidgetItem* ri=new QTableWidgetItem(f.role());
         if(f.role()=="SUPER_ADMIN") ri->setForeground(QColor("#7c3aed"));
         else if(f.role()=="ADMIN") ri->setForeground(QColor("#0d9488"));
-        m_tableFormateurs->setItem(i,4,ri);
+        m_tableFormateurs->setItem(row,4,ri);
         QTableWidgetItem* si=new QTableWidgetItem(f.statutCompte());
         si->setForeground(f.statutCompte()=="ACTIF"?QColor("#16a34a"):QColor("#dc2626"));
-        m_tableFormateurs->setItem(i,5,si);
+        m_tableFormateurs->setItem(row,5,si);
     }
     m_lblCount->setText(QString::number(list.size())+" formateur"+(list.size()>1?"s":""));
     ModuleTools::updateCategoryChart(m_chart,m_tableFormateurs,4,"Répartition des formateurs par rôle");
@@ -122,6 +139,12 @@ void FormateurWidget::ouvrirFormulaireAjout(){
     m_editNom->clear(); m_editPrenom->clear(); m_editEmail->clear(); m_editPassword->clear();
     m_editPassword->setPlaceholderText("Mot de passe (requis a la creation)");
     m_comboRole->setCurrentIndex(0); m_comboStatut->setCurrentIndex(0);
+    m_listCours->clear();
+    for(const auto& c:Cours::listerTout()){
+        auto* item=new QListWidgetItem(c.titre(), m_listCours);
+        item->setData(Qt::UserRole, c.id());
+    }
+    for(int i=0;i<m_listCours->count();++i) m_listCours->item(i)->setSelected(false);
     for(auto* w:{m_editNom,m_editPrenom,m_editEmail,m_editPassword}) w->setStyleSheet("");
     m_stack->setCurrentIndex(1);
 }
@@ -135,6 +158,16 @@ void FormateurWidget::remplirFormulaire(int id){
     m_editNom->setText(f.nom()); m_editPrenom->setText(f.prenom()); m_editEmail->setText(f.email());
     m_editPassword->clear(); m_editPassword->setPlaceholderText("Laisser vide pour conserver le mot de passe");
     m_comboRole->setCurrentText(f.role()); m_comboStatut->setCurrentText(f.statutCompte());
+    m_listCours->clear();
+    for(const auto& c:Cours::listerTout()){
+        auto* item=new QListWidgetItem(c.titre(), m_listCours);
+        item->setData(Qt::UserRole, c.id());
+    }
+    m_listCours->clearSelection();
+    for(int i=0;i<m_listCours->count();++i){
+        Cours c=Cours::trouverParId(m_listCours->item(i)->data(Qt::UserRole).toInt());
+        m_listCours->item(i)->setSelected(c.idFormateurResp()==id);
+    }
     for(auto* w:{m_editNom,m_editPrenom,m_editEmail,m_editPassword}) w->setStyleSheet("");
 }
 void FormateurWidget::enregistrer(){
@@ -158,6 +191,22 @@ void FormateurWidget::enregistrer(){
         f.setNom(nom); f.setPrenom(prenom); f.setEmail(email); f.setRole(m_comboRole->currentText()); f.setStatutCompte(m_comboStatut->currentText());
         f.setPasswordHash(!pwd.isEmpty()?Authentification::hashPassword(pwd):"");
         if(!f.modifier()){QMessageBox::critical(this,"Erreur","Echec de la modification."); return;}
+    }
+    int formateurId=m_idFormateurSelectionne;
+    if (m_modeAjout) {
+        for(const auto& formateur:Formateur::listerTout()) if(formateur.email()==email){ formateurId=formateur.id(); break; }
+    }
+    if (formateurId > 0) {
+        for(const auto& c0:Cours::listerTout()) {
+            Cours c=c0;
+            bool selected=false;
+            for(int i=0;i<m_listCours->count();++i) if(m_listCours->item(i)->data(Qt::UserRole).toInt()==c.id()) selected=m_listCours->item(i)->isSelected();
+            if(m_modeAjout && !selected) continue;
+            if(c.idFormateurResp()==formateurId && !selected) c.setIdFormateurResp(-1);
+            else if(selected) c.setIdFormateurResp(formateurId);
+            else continue;
+            if(!c.modifier()){QMessageBox::critical(this,"Erreur","Echec de la mise a jour des cours."); return;}
+        }
     }
     rafraichirTable(); retourListe();
 }

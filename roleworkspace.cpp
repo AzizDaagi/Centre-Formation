@@ -18,6 +18,7 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QSqlQuery>
+#include <QSqlError>
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QTextEdit>
@@ -59,7 +60,7 @@ void RoleWorkspace::setupUi() {
     root->setContentsMargins(20, 20, 20, 20);
     root->setSpacing(14);
 
-    // Hero banner
+    
     auto *hero = new QFrame(this);
     hero->setStyleSheet("background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #0f172a,stop:1 #1e3a8a);border-radius:20px;");
     auto *heroLayout = new QVBoxLayout(hero);
@@ -85,7 +86,7 @@ void RoleWorkspace::setupUi() {
     description->setStyleSheet("color:#cbd5e1;font-size:10pt;");
     heroLayout->addWidget(description);
 
-    // Notification Banner (Resolutions & Acknowledged Reports)
+    
     m_notificationBanner = new QLabel(this);
     m_notificationBanner->setVisible(false);
     m_notificationBanner->setStyleSheet(
@@ -93,7 +94,7 @@ void RoleWorkspace::setupUi() {
         "border-radius: 10px; padding: 10px 16px; font-weight: 600; font-size: 10pt;"
     );
 
-    // KPI row
+    
     auto *metrics = new QGridLayout();
     if (m_mode == Mode::Formateur) {
         metrics->addWidget(createMetricCard("MODULES ASSIGNÉS", &m_primaryMetric, "#38bdf8"), 0, 0);
@@ -109,7 +110,7 @@ void RoleWorkspace::setupUi() {
     root->addWidget(m_notificationBanner);
     root->addLayout(metrics);
 
-    // Dynamic Body based on Role
+    
     if (m_mode == Mode::Formateur) {
         root->addWidget(createFormateurWorkspace(), 1);
     } else {
@@ -117,9 +118,9 @@ void RoleWorkspace::setupUi() {
     }
 }
 
-// ============================================================================
-// FORMATEUR WORKSPACE
-// ============================================================================
+
+
+
 QWidget* RoleWorkspace::createFormateurWorkspace() {
     auto *tabWidget = new QTabWidget(this);
     tabWidget->setStyleSheet(
@@ -128,7 +129,7 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
         "QTabBar::tab:selected { background: #ffffff; color: #0284c7; border: 1px solid #e2e8f0; border-bottom: none; }"
     );
 
-    // --- TAB 1: Journal de Séance & Présences ---
+    
     auto *tabSession = new QWidget();
     auto *layoutSession = new QVBoxLayout(tabSession);
     layoutSession->setContentsMargins(16, 16, 16, 16);
@@ -169,8 +170,8 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
     layoutSession->addWidget(sessionBar);
 
     m_tablePresences = new QTableWidget(tabSession);
-    m_tablePresences->setColumnCount(5);
-    m_tablePresences->setHorizontalHeaderLabels({"ID", "Stagiaire", "Heures Actuelles", "Émargement du Jour", "Niveau Validé"});
+    m_tablePresences->setColumnCount(4);
+    m_tablePresences->setHorizontalHeaderLabels({"ID", "Stagiaire", "Heures Actuelles", "Émargement du Jour"});
     m_tablePresences->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     m_tablePresences->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     m_tablePresences->verticalHeader()->setVisible(false);
@@ -196,10 +197,10 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
     btnRowSession->addWidget(btnValidation);
     layoutSession->addLayout(btnRowSession);
 
-    tabWidget->addTab(tabSession, "Émargement & Conduite de Séance");
+    tabWidget->addTab(tabSession, "Séance");
     tabWidget->setTabIcon(0, ModuleTools::standardIcon(QStyle::SP_FileDialogDetailedView));
 
-    // --- TAB 2: Suivi & Validation des Compétences ---
+    
     auto *tabSuivi = new QWidget();
     auto *layoutSuivi = new QVBoxLayout(tabSuivi);
     layoutSuivi->setContentsMargins(16, 16, 16, 16);
@@ -234,7 +235,7 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
     actionSuivi->addStretch();
     layoutSuivi->addLayout(actionSuivi);
 
-    tabWidget->addTab(tabSuivi, "Suivi & Progression Stagiaires");
+    tabWidget->addTab(tabSuivi, "Suivi");
     tabWidget->setTabIcon(1, ModuleTools::standardIcon(QStyle::SP_FileDialogInfoView));
 
     auto *tabAi = new QWidget();
@@ -259,7 +260,7 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
     tabWidget->addTab(tabAi, "Analyse IA");
     tabWidget->setTabIcon(3, ModuleTools::standardIcon(QStyle::SP_ComputerIcon));
 
-    // --- TAB 3: Signalement Rapide ---
+    
     auto *tabIncident = new QWidget();
     auto *layoutIncident = new QVBoxLayout(tabIncident);
     layoutIncident->setContentsMargins(20, 20, 20, 20);
@@ -293,7 +294,7 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
     layoutIncident->addWidget(btnSendIncident, 0, Qt::AlignRight);
     layoutIncident->addStretch();
 
-    tabWidget->addTab(tabIncident, "Signalement & Escalade");
+    tabWidget->addTab(tabIncident, "Signalements");
     tabWidget->setTabIcon(2, ModuleTools::standardIcon(QStyle::SP_MessageBoxWarning));
 
     return tabWidget;
@@ -325,9 +326,9 @@ void RoleWorkspace::analyserProgressionAvecIA()
     m_aiProgressionResult->setPlainText(result.isEmpty() ? error : result);
 }
 
-// ============================================================================
-// STAGIAIRE PORTAL
-// ============================================================================
+
+
+
 QWidget* RoleWorkspace::createStagiaireWorkspace() {
     auto *tabWidget = new QTabWidget(this);
     tabWidget->setStyleSheet(
@@ -336,7 +337,7 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
         "QTabBar::tab:selected { background: #ffffff; color: #0284c7; border: 1px solid #e2e8f0; border-bottom: none; }"
     );
 
-    // --- TAB 1: Ma Progression ---
+    
     auto *tabProg = new QWidget();
     auto *layoutProg = new QVBoxLayout(tabProg);
     layoutProg->setContentsMargins(24, 24, 24, 24);
@@ -391,10 +392,10 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
     layoutProg->addWidget(m_btnAttestationPdf, 0, Qt::AlignRight);
 
     layoutProg->addStretch();
-    tabWidget->addTab(tabProg, "Ma Progression & Compétences");
+    tabWidget->addTab(tabProg, "Progression");
     tabWidget->setTabIcon(0, ModuleTools::standardIcon(QStyle::SP_FileDialogDetailedView));
 
-    // --- TAB 2: Justification d'Absence ---
+    
     auto *tabJustif = new QWidget();
     auto *layoutJustif = new QVBoxLayout(tabJustif);
     layoutJustif->setContentsMargins(24, 24, 24, 24);
@@ -418,10 +419,10 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
     connect(btnSendJustif, &QPushButton::clicked, this, &RoleWorkspace::soumettreJustificationStagiaire);
     layoutJustif->addWidget(btnSendJustif, 0, Qt::AlignRight);
 
-    tabWidget->addTab(tabJustif, "Justification d'Absence");
+    tabWidget->addTab(tabJustif, "Absences");
     tabWidget->setTabIcon(1, ModuleTools::standardIcon(QStyle::SP_FileDialogInfoView));
 
-    // --- TAB 3: Signalement Stagiaire ---
+    
     auto *tabIncidentStag = new QWidget();
     auto *layoutIncidentStag = new QVBoxLayout(tabIncidentStag);
     layoutIncidentStag->setContentsMargins(24, 24, 24, 24);
@@ -454,7 +455,7 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
     tabWidget->addTab(tabIncidentStag, "Signalement");
     tabWidget->setTabIcon(2, ModuleTools::standardIcon(QStyle::SP_MessageBoxWarning));
 
-    // --- TAB 4: Réservation Salle d'Étude & Repères ---
+    
     auto *tabBooking = new QWidget();
     auto *layoutBooking = new QVBoxLayout(tabBooking);
     layoutBooking->setContentsMargins(22, 22, 22, 22);
@@ -464,7 +465,7 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
     lblBookingTitle->setStyleSheet("font-size: 13pt; color: #0f172a;");
     layoutBooking->addWidget(lblBookingTitle);
 
-    // Insight card: Normal study room with formateur + change tracking
+    
     auto *cardInsight = new QFrame(tabBooking);
     cardInsight->setStyleSheet("background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px;");
     auto *layInsight = new QVBoxLayout(cardInsight);
@@ -479,7 +480,7 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
     layInsight->addWidget(m_lblSalleStatutChangement);
     layoutBooking->addWidget(cardInsight);
 
-    // Live available study rooms table
+    
     auto *lblDispos = new QLabel("<b>Salles disponibles pour étude individuelle ou en groupe :</b>", tabBooking);
     lblDispos->setStyleSheet("color: #334155; font-size: 10pt;");
     layoutBooking->addWidget(lblDispos);
@@ -496,7 +497,7 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
     layoutBooking->addWidget(m_tableSallesDispos, 1);
     layoutBooking->addWidget(ModuleTools::createPaginationControls(m_tableSallesDispos, 6));
 
-    // Booking action bar
+    
     auto *barBooking = new QHBoxLayout();
     barBooking->addWidget(new QLabel("<b>Salle :</b>", tabBooking));
     m_comboReservationSalle = new QComboBox(tabBooking);
@@ -552,7 +553,7 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
     connect(m_btnAnnulerReservation, &QPushButton::clicked, this, &RoleWorkspace::annulerReservationEtude);
     layoutBooking->addWidget(m_btnAnnulerReservation, 0, Qt::AlignRight);
 
-    tabWidget->addTab(tabBooking, "Salle d'Étude & Réservation");
+    tabWidget->addTab(tabBooking, "Réservations");
     tabWidget->setTabIcon(3, ModuleTools::standardIcon(QStyle::SP_DirOpenIcon));
 
     return tabWidget;
@@ -576,13 +577,13 @@ void RoleWorkspace::refresh() {
     }
 }
 
-// ============================================================================
-// DATA LOGIC - FORMATEUR
-// ============================================================================
+
+
+
 void RoleWorkspace::refreshFormateur() {
     QSqlQuery query(DB::instance().database());
 
-    // Notification Banner check: resolved signals submitted by this trainer
+    
     query.prepare("SELECT COUNT(*) FROM SALLE WHERE REPORT_AUTHOR LIKE :auth AND REPORT_STATUS = 'RESOLU'");
     query.bindValue(":auth", "%" + m_userFirstName + "%");
     if (query.exec() && query.next() && query.value(0).toInt() > 0) {
@@ -592,7 +593,7 @@ void RoleWorkspace::refreshFormateur() {
         m_notificationBanner->setVisible(false);
     }
 
-    // KPIs
+    
     query.prepare("SELECT COUNT(*), NVL(SUM(HEURES_REQUISES), 0) FROM COURS WHERE ID_FORMATEUR_RESP = :id");
     query.bindValue(":id", m_userId);
     if (query.exec() && query.next()) {
@@ -606,7 +607,7 @@ void RoleWorkspace::refreshFormateur() {
         m_secondaryMetric->setText(query.value(0).toString());
     }
 
-    // Populate Courses combo
+    
     m_comboFormateurCours->blockSignals(true);
     m_comboFormateurCours->clear();
     query.prepare("SELECT ID_COURS, TITRE FROM COURS WHERE ID_FORMATEUR_RESP = :id ORDER BY TITRE");
@@ -619,7 +620,7 @@ void RoleWorkspace::refreshFormateur() {
     ModuleTools::refreshPagination(m_tablePresences);
     m_comboFormateurCours->blockSignals(false);
 
-    // Populate Rooms for Incident combo
+    
     m_comboSalleIncidentForm->clear();
     query.prepare("SELECT ID_SALLE, NOM_SALLE FROM SALLE ORDER BY NOM_SALLE");
     if (query.exec()) {
@@ -631,7 +632,44 @@ void RoleWorkspace::refreshFormateur() {
 
     if (m_comboFormateurCours->count() > 0) {
         onFormateurCoursChanged(0);
+    } else {
+        m_tablePresences->setRowCount(0);
+        m_lblSalleSession->setText("Aucun cours assigné");
     }
+    refreshFormateurTrainees();
+}
+
+void RoleWorkspace::refreshFormateurTrainees()
+{
+    m_tableStagiairesSuivi->setRowCount(0);
+    QSqlQuery query(DB::instance().database());
+    query.prepare("SELECT s.ID_STAGIAIRE, s.PRENOM || ' ' || s.NOM, s.EMAIL, "
+                  "NVL(s.HEURES_VALIDEES, 0), NVL(c.HEURES_REQUISES, 0), s.STATUT "
+                  "FROM STAGIAIRE s LEFT JOIN COURS c ON s.ID_COURS = c.ID_COURS "
+                  "WHERE s.ID_FORMATEUR = :fid ORDER BY s.NOM, s.PRENOM");
+    query.bindValue(":fid", m_userId);
+    if (!query.exec()) {
+        qWarning() << "Impossible de charger les stagiaires du formateur:"
+                   << query.lastError().text();
+        return;
+    }
+
+    int row = 0;
+    while (query.next()) {
+        m_tableStagiairesSuivi->insertRow(row);
+        m_tableStagiairesSuivi->setItem(row, 0, new QTableWidgetItem(query.value(0).toString()));
+        m_tableStagiairesSuivi->setItem(row, 1, new QTableWidgetItem(query.value(1).toString()));
+        m_tableStagiairesSuivi->setItem(row, 2, new QTableWidgetItem(query.value(2).toString()));
+
+        const double done = query.value(3).toDouble();
+        const double total = query.value(4).toDouble();
+        const int percentage = total > 0 ? qBound(0, qRound((done / total) * 100.0), 100) : 0;
+        m_tableStagiairesSuivi->setItem(row, 3, new QTableWidgetItem(QString::number(done, 'f', 1) + " h"));
+        m_tableStagiairesSuivi->setItem(row, 4, new QTableWidgetItem(QString::number(percentage) + " %"));
+        m_tableStagiairesSuivi->setItem(row, 5, new QTableWidgetItem(query.value(5).toString()));
+        ++row;
+    }
+    ModuleTools::refreshPagination(m_tableStagiairesSuivi);
 }
 
 void RoleWorkspace::onFormateurCoursChanged(int index) {
@@ -640,7 +678,7 @@ void RoleWorkspace::onFormateurCoursChanged(int index) {
 
     QSqlQuery query(DB::instance().database());
 
-    // Resolve assigned room for this course
+    
     query.prepare("SELECT NVL(sa.NOM_SALLE, 'Non assignée') "
                   "FROM STAGIAIRE s JOIN SALLE sa ON s.ID_SALLE_ATTITREE = sa.ID_SALLE "
                   "WHERE s.ID_COURS = :cid AND ROWNUM = 1");
@@ -651,7 +689,7 @@ void RoleWorkspace::onFormateurCoursChanged(int index) {
         m_lblSalleSession->setText("Non assignée");
     }
 
-    // Populate Attendance Table
+    
     m_tablePresences->setRowCount(0);
     query.prepare("SELECT ID_STAGIAIRE, PRENOM || ' ' || NOM, NVL(HEURES_VALIDEES, 0) "
                   "FROM STAGIAIRE WHERE ID_COURS = :cid AND ID_FORMATEUR = :fid ORDER BY NOM, PRENOM");
@@ -669,40 +707,11 @@ void RoleWorkspace::onFormateurCoursChanged(int index) {
             comboStatut->addItems({"Présent", "Absent", "Retard / Excusé"});
             m_tablePresences->setCellWidget(row, 3, comboStatut);
 
-            auto *comboNiveau = new QComboBox();
-            comboNiveau->addItems({"Niveau 1 (Initié)", "Niveau 2 (Intermédiaire)", "Niveau 3 (Autonome)", "Niveau 4 (Maîtrise)"});
-            m_tablePresences->setCellWidget(row, 4, comboNiveau);
-
             ++row;
         }
     }
 
-    // Populate Suivi Table
-    m_tableStagiairesSuivi->setRowCount(0);
-    query.prepare("SELECT s.ID_STAGIAIRE, s.PRENOM || ' ' || s.NOM, s.EMAIL, NVL(s.HEURES_VALIDEES, 0), "
-                  "NVL(c.HEURES_REQUISES, 0), s.STATUT "
-                  "FROM STAGIAIRE s LEFT JOIN COURS c ON s.ID_COURS = c.ID_COURS "
-                  "WHERE s.ID_FORMATEUR = :fid ORDER BY s.NOM, s.PRENOM");
-    query.bindValue(":fid", m_userId);
-    if (query.exec()) {
-        int row = 0;
-        while (query.next()) {
-            m_tableStagiairesSuivi->insertRow(row);
-            m_tableStagiairesSuivi->setItem(row, 0, new QTableWidgetItem(query.value(0).toString()));
-            m_tableStagiairesSuivi->setItem(row, 1, new QTableWidgetItem(query.value(1).toString()));
-            m_tableStagiairesSuivi->setItem(row, 2, new QTableWidgetItem(query.value(2).toString()));
-
-            double done = query.value(3).toDouble();
-            double total = query.value(4).toDouble();
-            int pct = total > 0 ? qBound(0, qRound((done / total) * 100.0), 100) : 0;
-
-            m_tableStagiairesSuivi->setItem(row, 3, new QTableWidgetItem(QString::number(done, 'f', 1) + " h"));
-            m_tableStagiairesSuivi->setItem(row, 4, new QTableWidgetItem(QString::number(pct) + " %"));
-            m_tableStagiairesSuivi->setItem(row, 5, new QTableWidgetItem(query.value(5).toString()));
-
-            ++row;
-        }
-    }
+    refreshFormateurTrainees();
 }
 
 void RoleWorkspace::validerSeanceEtPresences() {
@@ -792,7 +801,7 @@ void RoleWorkspace::exporterFeuilleEmargementPdf() {
     QPainter painter(&pdf);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    // Document Header
+    
     painter.fillRect(35, 30, 525, 60, QColor("#0f172a"));
     painter.setPen(Qt::white);
     QFont fTitle = painter.font(); fTitle.setPointSize(14); fTitle.setBold(true); painter.setFont(fTitle);
@@ -805,7 +814,7 @@ void RoleWorkspace::exporterFeuilleEmargementPdf() {
     painter.drawText(35, 155, QString("Salle : %1 | Date : %2 | Volume : %3 h").arg(m_lblSalleSession->text(), QDate::currentDate().toString("dd/MM/yyyy"), QString::number(m_spinHeuresSession->value(), 'f', 1)));
     painter.drawText(35, 175, QString("Thème séance : %1").arg(m_editSujetSession->text().isEmpty() ? "Séance de formation" : m_editSujetSession->text()));
 
-    // Table Header
+    
     int y = 205;
     painter.fillRect(35, y, 525, 26, QColor("#0284c7"));
     painter.setPen(Qt::white);
@@ -815,7 +824,7 @@ void RoleWorkspace::exporterFeuilleEmargementPdf() {
     painter.drawText(310, y + 17, "Présence");
     painter.drawText(410, y + 17, "Signature Stagiaire");
 
-    // Table Rows
+    
     y += 26;
     QFont fRow = painter.font(); fRow.setBold(false); fRow.setPointSize(9); painter.setFont(fRow);
     for (int r = 0; r < m_tablePresences->rowCount(); ++r) {
@@ -831,14 +840,14 @@ void RoleWorkspace::exporterFeuilleEmargementPdf() {
         QString pres = combo ? combo->currentText() : "Présent";
         painter.drawText(310, y + 18, pres);
 
-        // Blank signature box
+        
         painter.setPen(QColor("#94a3b8"));
         painter.drawRect(410, y + 4, 130, 20);
 
         y += 28;
     }
 
-    // Signatures footer
+    
     y += 35;
     painter.setPen(QColor("#0f172a"));
     painter.drawText(35, y, "Visa & Signature du Formateur :");
@@ -851,13 +860,13 @@ void RoleWorkspace::exporterFeuilleEmargementPdf() {
     QMessageBox::information(this, "Feuille exportée", "La feuille d'émargement a été enregistrée avec succès :\n" + path);
 }
 
-// ============================================================================
-// DATA LOGIC - STAGIAIRE
-// ============================================================================
+
+
+
 void RoleWorkspace::refreshStagiaire() {
     QSqlQuery query(DB::instance().database());
 
-    // Check acknowledged justifications/reports
+    
     query.prepare(
         "SELECT REPORT_STATUS FROM COURS WHERE ID_COURS = "
         "(SELECT ID_COURS FROM STAGIAIRE WHERE ID_STAGIAIRE = :id) AND REPORT_AUTHOR LIKE :auth"
@@ -922,7 +931,7 @@ void RoleWorkspace::refreshStagiaire() {
             .arg(QString::number(restant, 'f', 1))
         );
 
-        // Update Room Insight & Study Booking Info
+        
         if (m_lblSalleHabituelle && m_lblSalleStatutChangement) {
             QString salleNom = query.value(2).toString();
             QString formateurNom = query.value(1).toString();
@@ -933,7 +942,7 @@ void RoleWorkspace::refreshStagiaire() {
                 .arg(salleNom, formateurNom, coursNom)
             );
 
-            // Check if current assigned room has an active incident/maintenance
+            
             QSqlQuery qInc(DB::instance().database());
             qInc.prepare("SELECT STATUT, REPORT_STATUS, REPORT_DESCRIPTION FROM SALLE WHERE ID_SALLE = :sid");
             qInc.bindValue(":sid", query.value(8));
@@ -958,7 +967,7 @@ void RoleWorkspace::refreshStagiaire() {
             }
         }
 
-        // Populate available study rooms
+        
         if (m_tableSallesDispos && m_comboReservationSalle) {
             m_tableSallesDispos->setRowCount(0);
             m_comboReservationSalle->clear();
@@ -1000,7 +1009,7 @@ void RoleWorkspace::refreshStagiaire() {
             ModuleTools::refreshPagination(m_tableMesReservations);
         }
 
-        // Enable Attestation button if course hours fulfilled or status is DIPLOME
+        
         bool qualifiesForDiploma = (statut == "DIPLOME") || (total > 0 && done >= total);
         m_btnAttestationPdf->setEnabled(qualifiesForDiploma);
         if (qualifiesForDiploma) {
@@ -1038,10 +1047,10 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
     const int W = pdf.width();
     const int H = pdf.height();
 
-    // 1. Full Page Background
+    
     painter.fillRect(0, 0, W, H, QColor("#F8FAFC"));
 
-    // 2. Double Security Borders
+    
     const int mOuter = 22;
     painter.setPen(QPen(QColor("#0F172A"), 3));
     painter.setBrush(Qt::NoBrush);
@@ -1051,7 +1060,7 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
     painter.setPen(QPen(QColor("#0284C7"), 1.2, Qt::DashLine));
     painter.drawRect(mInner, mInner, W - 2 * mInner, H - 2 * mInner);
 
-    // Decorative corner marks
+    
     auto drawCorner = [&](int x, int y, int dx, int dy) {
         painter.setPen(QPen(QColor("#0F172A"), 2.5));
         painter.drawLine(x, y, x + dx * 20, y);
@@ -1062,7 +1071,7 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
     drawCorner(mOuter + 5, H - mOuter - 5, 1, -1);
     drawCorner(W - mOuter - 5, H - mOuter - 5, -1, -1);
 
-    // 3. Header Banner
+    
     const int bannerX = mInner + 14;
     const int bannerW = W - 2 * bannerX;
     const int bannerY = 48;
@@ -1095,7 +1104,7 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
     painter.drawText(QRect(bannerX + 10, bannerY + 68, bannerW - 20, 18), Qt::AlignCenter,
                      QString::fromUtf8("ORGANISME AGRÉÉ ET HOMOLOGUÉ SOUS LE N° 2026/PRO/7841"));
 
-    // 4. Main Certificate Title
+    
     int curY = bannerY + bannerH + 24;
 
     painter.setPen(QColor("#0F172A"));
@@ -1118,7 +1127,7 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
     painter.setPen(QPen(QColor("#CBD5E1"), 1.2));
     painter.drawLine(W / 2 - 140, curY, W / 2 + 140, curY);
 
-    // 5. Attribution Preamble
+    
     curY += 18;
     painter.setPen(QColor("#475569"));
     QFont fIntro = painter.font();
@@ -1128,7 +1137,7 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
     painter.drawText(QRect(0, curY, W, 22), Qt::AlignCenter,
                      QString::fromUtf8("La Direction pédagogique du Centre atteste par la présente que :"));
 
-    // 6. Trainee Full Name Hero Box
+    
     curY += 26;
     const int nameBoxW = W - 2 * (mInner + 30);
     const int nameBoxX = (W - nameBoxW) / 2;
@@ -1144,7 +1153,7 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
     painter.drawText(QRect(nameBoxX, curY + 4, nameBoxW, 44), Qt::AlignCenter,
                      QString("%1 %2").arg(m_userFirstName.trimmed().toUpper(), m_userLastName.trimmed().toUpper()));
 
-    // 7. Descriptive Paragraph
+    
     curY += 66;
     const int contentX = mInner + 28;
     const int contentW = W - 2 * contentX;
@@ -1162,7 +1171,7 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
     );
     painter.drawText(QRect(contentX, curY, contentW, 48), Qt::AlignLeft | Qt::TextWordWrap, descLine);
 
-    // 8. Module Highlight Card
+    
     curY += 52;
     painter.fillRect(contentX, curY, contentW, 46, QColor("#FFFFFF"));
     painter.setPen(QPen(QColor("#E2E8F0"), 1.2));
@@ -1170,7 +1179,7 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
     painter.fillRect(contentX, curY, 6, 46, QColor("#0284C7"));
 
     QString cleanCourseTitle = m_lblStagiaireCours->text();
-    // Fix any potential legacy accent mangling
+    
     cleanCourseTitle.replace("D,veloppement", QString::fromUtf8("Développement"));
     cleanCourseTitle.replace("D?veloppement", QString::fromUtf8("Développement"));
 
@@ -1182,14 +1191,14 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
     painter.drawText(QRect(contentX + 18, curY + 6, contentW - 28, 34), Qt::AlignVCenter | Qt::AlignLeft,
                      QString::fromUtf8("Module : %1").arg(cleanCourseTitle));
 
-    // 9. Structured 2-Column Grid (Using exact cell QRects to guarantee zero text overlap)
+    
     curY += 58;
     const int gridH = 140;
     painter.fillRect(contentX, curY, contentW, gridH, QColor("#FFFFFF"));
     painter.setPen(QPen(QColor("#E2E8F0"), 1));
     painter.drawRect(contentX, curY, contentW, gridH);
 
-    // Vertical column divider
+    
     const int midX = contentX + contentW / 2;
     painter.setPen(QPen(QColor("#F1F5F9"), 1.2));
     painter.drawLine(midX, curY + 6, midX, curY + gridH - 6);
@@ -1215,19 +1224,19 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
         painter.drawText(QRect(x + labelW, y, valW, rH), Qt::AlignVCenter | Qt::AlignLeft, val);
     };
 
-    // Row 1
+    
     drawField(col1Left, curY + 8, QString::fromUtf8("• Formateur responsable :"), m_lblStagiaireFormateur->text());
     drawField(col2Left, curY + 8, QString::fromUtf8("• Période d'études :"), m_lblStagiairePeriode->text());
 
-    // Row 2
+    
     drawField(col1Left, curY + 8 + rH, QString::fromUtf8("• Salle d'affectation :"), m_lblStagiaireSalle->text());
     drawField(col2Left, curY + 8 + rH, QString::fromUtf8("• Volume certifié :"), QString("%1 validées").arg(m_primaryMetric->text()), QColor("#0284C7"));
 
-    // Row 3
+    
     drawField(col1Left, curY + 8 + 2 * rH, QString::fromUtf8("• Statut académique :"), QString::fromUtf8("VALIDÉ & HOMOLOGUÉ"), QColor("#16A34A"));
     drawField(col2Left, curY + 8 + 2 * rH, QString::fromUtf8("• Assiduité globale :"), QString::fromUtf8("100% Conforme"));
 
-    // 10. Official Signatures and Seals
+    
     curY += gridH + 28;
     const int signBoxW = (contentW - 24) / 2;
     const int signBoxH = 100;
@@ -1246,7 +1255,7 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
         painter.drawText(QRect(x + 12, y + 28, signBoxW - 85, 18), Qt::AlignLeft, signer);
         painter.drawText(QRect(x + 12, y + 46, signBoxW - 85, 18), Qt::AlignLeft, dep);
 
-        // Stamp Seal on the right side of the box
+        
         const int stampD = 58;
         const int stampX = x + signBoxW - stampD - 12;
         const int stampY = y + (signBoxH - stampD) / 2;
@@ -1271,7 +1280,7 @@ void RoleWorkspace::exporterAttestationFormationPdf() {
                  QString::fromUtf8("Direction des Certifications"),
                  QString::fromUtf8("Centre de Formation Professionnelle"));
 
-    // 11. Security Footer
+    
     const int footerY = H - mOuter - 35;
     painter.setPen(QColor("#94A3B8"));
     QFont fFoot = painter.font(); fFoot.setPointSize(8); fFoot.setBold(false); painter.setFont(fFoot);

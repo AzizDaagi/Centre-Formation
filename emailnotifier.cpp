@@ -106,7 +106,7 @@ QStringList adminEmails()
     return result;
 }
 
-} // namespace
+} 
 
 QString EmailNotifier::lastError()
 {

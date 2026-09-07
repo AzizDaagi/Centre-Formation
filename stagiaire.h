@@ -36,7 +36,7 @@ public:
         m_statut(statut)
     {}
 
-    // Getters
+    
     int id() const { return m_id; }
     QString nom() const { return m_nom; }
     QString prenom() const { return m_prenom; }
@@ -50,7 +50,7 @@ public:
     double heuresValidees() const { return m_heuresValidees; }
     QString statut() const { return m_statut; }
 
-    // Setters
+    
     void setId(int id) { m_id = id; }
     void setNom(const QString& nom) { m_nom = nom; }
     void setPrenom(const QString& prenom) { m_prenom = prenom; }
@@ -64,7 +64,7 @@ public:
     void setHeuresValidees(double heures) { m_heuresValidees = heures; }
     void setStatut(const QString& statut) { m_statut = statut; }
 
-    // Database operations
+    
     bool ajouter();
     bool modifier();
     bool supprimer();
@@ -92,4 +92,4 @@ private:
     QString m_statut = "ACTIF";
 };
 
-#endif // STAGIAIRE_H
+#endif 

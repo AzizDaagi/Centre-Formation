@@ -21,4 +21,4 @@ private:
     QString m_lastError;
 };
 
-#endif // DB_H
+#endif 

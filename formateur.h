@@ -25,7 +25,7 @@ public:
         m_statutCompte(statutCompte)
     {}
 
-    // Getters
+    
     int id() const { return m_id; }
     QString nom() const { return m_nom; }
     QString prenom() const { return m_prenom; }
@@ -34,7 +34,7 @@ public:
     QString role() const { return m_role; }
     QString statutCompte() const { return m_statutCompte; }
 
-    // Setters
+    
     void setId(int id) { m_id = id; }
     void setNom(const QString& nom) { m_nom = nom; }
     void setPrenom(const QString& prenom) { m_prenom = prenom; }
@@ -43,7 +43,7 @@ public:
     void setRole(const QString& role) { m_role = role; }
     void setStatutCompte(const QString& statut) { m_statutCompte = statut; }
 
-    // Database operations
+    
     bool ajouter();
     bool modifier();
     bool supprimer();
@@ -61,4 +61,4 @@ private:
     QString m_statutCompte = "ACTIF";
 };
 
-#endif // FORMATEUR_H
+#endif 

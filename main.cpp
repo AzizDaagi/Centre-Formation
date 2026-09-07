@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     dialogPalette.setColor(QPalette::ButtonText, QColor("#ffffff"));
     a.setPalette(dialogPalette);
 
-    // 1. Load stylesheet (adjust path if using Qt Resource file like ":/style.qss")
+    
     QFile styleFile(":/style.qss");
     if (styleFile.open(QFile::ReadOnly | QFile::Text)) {
         QTextStream stream(&styleFile);
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
         qDebug() << "Could not open QSS file:" << styleFile.errorString();
     }
 
-    // 2. Database connection check with user-facing error dialog
+    
     if (!DB::instance().connect()) {
         QMessageBox::critical(
             nullptr,

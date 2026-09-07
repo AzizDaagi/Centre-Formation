@@ -8,11 +8,12 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QStackedWidget>
+#include <QListWidget>
 
 class FormateurWidget : public QWidget {
     Q_OBJECT
 public:
-    explicit FormateurWidget(QWidget *parent = nullptr);
+    explicit FormateurWidget(bool superAdmin, QWidget *parent = nullptr);
     void rafraichirTable();
     void afficherListe();
     void afficherFormulaireAjout();
@@ -37,8 +38,10 @@ private:
     class QChartView* m_chart = nullptr;
     QLineEdit*      m_editNom, *m_editPrenom, *m_editEmail, *m_editPassword;
     QComboBox*      m_comboRole, *m_comboStatut;
+    QListWidget*    m_listCours;
     QPushButton*    m_btnEnregistrer, *m_btnAnnuler;
     int  m_idFormateurSelectionne = -1;
     bool m_modeAjout = true;
+    bool m_superAdmin = false;
 };
 #endif

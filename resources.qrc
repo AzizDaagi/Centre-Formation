@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>style.qss</file>
+        <file>database/schema.sql</file>
     </qresource>
 </RCC>

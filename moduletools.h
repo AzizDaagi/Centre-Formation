@@ -26,4 +26,4 @@ public:
     static void refreshPagination(QTableWidget *table);
 };
 
-#endif // MODULETOOLS_H
+#endif 

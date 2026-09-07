@@ -21,21 +21,21 @@ public:
         m_idFormateurResp(idFormateurResp)
     {}
 
-    // Getters
+    
     int id() const { return m_id; }
     QString titre() const { return m_titre; }
     QString description() const { return m_description; }
     int heuresRequises() const { return m_heuresRequises; }
     int idFormateurResp() const { return m_idFormateurResp; }
 
-    // Setters
+    
     void setId(int id) { m_id = id; }
     void setTitre(const QString& titre) { m_titre = titre; }
     void setDescription(const QString& description) { m_description = description; }
     void setHeuresRequises(int heures) { m_heuresRequises = heures; }
     void setIdFormateurResp(int id) { m_idFormateurResp = id; }
 
-    // Database operations
+    
     bool ajouter();
     bool modifier();
     bool supprimer();
@@ -55,4 +55,4 @@ private:
     int m_idFormateurResp = -1;
 };
 
-#endif // COURS_H
+#endif 

@@ -29,7 +29,7 @@ signals:
     void openProfileRequested();
 
 private slots:
-    // Formateur actions
+    
     void onFormateurCoursChanged(int index);
     void validerSeanceEtPresences();
     void mettreAJourStatutStagiaire();
@@ -37,7 +37,7 @@ private slots:
     void exporterFeuilleEmargementPdf();
     void analyserProgressionAvecIA();
 
-    // Stagiaire actions
+    
     void soumettreJustificationStagiaire();
     void envoyerSignalementStagiaire();
     void exporterAttestationFormationPdf();
@@ -49,13 +49,14 @@ private:
     void refresh();
     QWidget* createMetricCard(const QString &label, QLabel **value, const QString &accent);
 
-    // Specific workspace creators
+    
     QWidget* createFormateurWorkspace();
     QWidget* createStagiaireWorkspace();
 
-    // Refreshers
+    
     void refreshFormateur();
     void refreshStagiaire();
+    void refreshFormateurTrainees();
 
     Mode m_mode;
     int m_userId = -1;
@@ -63,14 +64,14 @@ private:
     QString m_userLastName;
     QString m_userEmail;
 
-    // Common UI
+    
     QLabel *m_welcome = nullptr;
     QLabel *m_notificationBanner = nullptr;
     QLabel *m_primaryMetric = nullptr;
     QLabel *m_secondaryMetric = nullptr;
     QLabel *m_tertiaryMetric = nullptr;
 
-    // Formateur UI components
+    
     QComboBox *m_comboFormateurCours = nullptr;
     QLabel *m_lblSalleSession = nullptr;
     QDoubleSpinBox *m_spinHeuresSession = nullptr;
@@ -85,7 +86,7 @@ private:
     QTextEdit *m_editDescIncidentForm = nullptr;
     QTextEdit *m_aiProgressionResult = nullptr;
 
-    // Stagiaire UI components
+    
     QLabel *m_lblStagiaireCours = nullptr;
     QLabel *m_lblStagiaireFormateur = nullptr;
     QLabel *m_lblStagiaireSalle = nullptr;
@@ -98,7 +99,7 @@ private:
     QComboBox *m_comboTypeIncidentStag = nullptr;
     QTextEdit *m_editDescIncidentStag = nullptr;
 
-    // Stagiaire Study Booking & Room Insight
+    
     QLabel *m_lblSalleHabituelle = nullptr;
     QLabel *m_lblSalleStatutChangement = nullptr;
     QTableWidget *m_tableSallesDispos = nullptr;
@@ -110,4 +111,4 @@ private:
     QPushButton *m_btnAnnulerReservation = nullptr;
 };
 
-#endif // ROLEWORKSPACE_H
+#endif 

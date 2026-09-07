@@ -13,14 +13,14 @@ DashboardWidget::~DashboardWidget() {}
 
 void DashboardWidget::setupUi()
 {
-    // Main Container Layout
+    
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->setSpacing(20);
     mainLayout->setContentsMargins(25, 25, 25, 25);
 
-    // -------------------------------------------------------------
-    // 1. TOP SECTION: KPI Metric Cards
-    // -------------------------------------------------------------
+    
+    
+    
     QHBoxLayout *kpiLayout = new QHBoxLayout();
     kpiLayout->setSpacing(15);
 
@@ -31,13 +31,13 @@ void DashboardWidget::setupUi()
 
     mainLayout->addLayout(kpiLayout);
 
-    // -------------------------------------------------------------
-    // 2. MIDDLE SECTION: Schedule List (Left) + Signals Summary (Right)
-    // -------------------------------------------------------------
+    
+    
+    
     QHBoxLayout *middleLayout = new QHBoxLayout();
     middleLayout->setSpacing(20);
 
-    // --- LEFT CARD: Upcoming Schedule ---
+    
     QFrame *scheduleCard = new QFrame(this);
     scheduleCard->setStyleSheet("QFrame { background-color: #FFFFFF; border-radius: 12px; border: 1px solid #E5E7EB; }");
     QVBoxLayout *scheduleCardLayout = new QVBoxLayout(scheduleCard);
@@ -55,7 +55,7 @@ void DashboardWidget::setupUi()
     scheduleHeaderLayout->addStretch();
     scheduleCardLayout->addWidget(scheduleHeader);
 
-    // Container for dynamic schedule items
+    
     QFrame *scheduleItemsContainer = new QFrame(scheduleCard);
     scheduleItemsContainer->setStyleSheet("border: none;");
     m_scheduleListLayout = new QVBoxLayout(scheduleItemsContainer);
@@ -64,9 +64,9 @@ void DashboardWidget::setupUi()
     scheduleCardLayout->addWidget(scheduleItemsContainer);
     scheduleCardLayout->addStretch();
 
-    middleLayout->addWidget(scheduleCard, 3); // 60% width ratio
+    middleLayout->addWidget(scheduleCard, 3); 
 
-    // --- RIGHT CARD: Signals & Reclamations Summary ---
+    
     QFrame *signalsCard = new QFrame(this);
     signalsCard->setStyleSheet("QFrame { background-color: #FEF2F2; border-radius: 12px; border: 1px solid #FCA5A5; }");
     QVBoxLayout *signalsCardLayout = new QVBoxLayout(signalsCard);
@@ -87,7 +87,7 @@ void DashboardWidget::setupUi()
     signalsHeaderLayout->addWidget(m_lblSignalsCount);
     signalsCardLayout->addLayout(signalsHeaderLayout);
 
-    // Preview area inside signal card
+    
     QFrame *previewBox = new QFrame(signalsCard);
     previewBox->setStyleSheet("background-color: #FFFFFF; border-radius: 8px; border: 1px solid #FEE2E2;");
     QVBoxLayout *previewLayout = new QVBoxLayout(previewBox);
@@ -113,17 +113,17 @@ void DashboardWidget::setupUi()
     signalsCardLayout->addStretch();
     signalsCardLayout->addWidget(btnViewAllSignals);
 
-    middleLayout->addWidget(signalsCard, 2); // 40% width ratio
+    middleLayout->addWidget(signalsCard, 2); 
 
     mainLayout->addLayout(middleLayout, 2);
 
-    // -------------------------------------------------------------
-    // 3. BOTTOM SECTION: Room Utilization (Left) + Shortcuts (Right)
-    // -------------------------------------------------------------
+    
+    
+    
     QHBoxLayout *bottomLayout = new QHBoxLayout();
     bottomLayout->setSpacing(20);
 
-    // --- LEFT CARD: Room Capacity / Usage ---
+    
     QFrame *usageCard = new QFrame(this);
     usageCard->setStyleSheet("QFrame { background-color: #FFFFFF; border-radius: 12px; border: 1px solid #E5E7EB; }");
     QVBoxLayout *usageCardLayout = new QVBoxLayout(usageCard);
@@ -155,7 +155,7 @@ void DashboardWidget::setupUi()
 
     bottomLayout->addWidget(usageCard, 3);
 
-    // --- RIGHT CARD: Quick Shortcuts ---
+    
     QFrame *shortcutsCard = new QFrame(this);
     shortcutsCard->setStyleSheet("QFrame { background-color: #FFFFFF; border-radius: 12px; border: 1px solid #E5E7EB; }");
     QVBoxLayout *shortcutsCardLayout = new QVBoxLayout(shortcutsCard);
@@ -266,7 +266,7 @@ void DashboardWidget::loadKpiMetrics()
 
 void DashboardWidget::loadUpcomingCourses()
 {
-    // Clear existing schedule widgets from m_scheduleListLayout
+    
     QLayoutItem *child;
     while ((child = m_scheduleListLayout->takeAt(0)) != nullptr) {
         if (child->widget()) delete child->widget();
@@ -274,7 +274,7 @@ void DashboardWidget::loadUpcomingCourses()
     }
 
     QSqlQuery query(DB::instance().database());
-    // Query fetching up to 3 courses with JOIN on FORMATEUR and SALLE (via STAGIAIRE assignment)
+    
     query.prepare(
         "SELECT c.TITRE, "
         "       NVL(f.PRENOM || ' ' || f.NOM, 'Non assigné') AS NOM_FORMATEUR, "
@@ -320,7 +320,7 @@ void DashboardWidget::loadUpcomingCourses()
 void DashboardWidget::loadSignalsSummary()
 {
     QSqlQuery query(DB::instance().database());
-    // Count active signals from SALLE and COURS using UNION ALL
+    
     query.prepare(
         "SELECT "
         "  (SELECT COUNT(*) FROM SALLE WHERE REPORT_STATUS IS NOT NULL AND UPPER(TRIM(REPORT_STATUS)) != 'NONE') + "
@@ -339,7 +339,7 @@ void DashboardWidget::loadSignalsSummary()
         m_lblSignalsPreviewText->setText("Tout est en ordre. Aucun signalement en attente.");
         m_lblSignalsPreviewMeta->setText("");
     } else {
-        // Fetch the most recent report preview from SALLE or COURS via UNION ALL
+        
         QSqlQuery previewQuery(DB::instance().database());
         previewQuery.prepare(
             "SELECT TYPE_OBJET, NOM_OBJET, REPORT_DESCRIPTION, REPORT_AUTHOR, REPORT_STATUS FROM ("

@@ -100,7 +100,7 @@ Salle Salle::trouverParId(int id) {
             query.value(4).toString()
             );
     }
-    return Salle(); // salle vide/invalide si non trouvée
+    return Salle(); 
 }
 
 bool Salle::mettreAJourSignalement(int id, const QString &statut,
