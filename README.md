@@ -18,13 +18,6 @@ Application de bureau réalisée avec Qt et C++ pour gérer un centre de formati
 - CMake
 - Ollama pour la fonctionnalité d'intelligence artificielle
 
-## Compilation
-
-```powershell
-cmake -S . -B build
-cmake --build build --config Debug
-```
-
 La base de données et les paramètres de connexion sont configurés dans `settings.ini`.
 
 Pour utiliser l'analyse IA, lancer Ollama avec le modèle configuré :
