@@ -2,6 +2,7 @@
 #define ROLEWORKSPACE_H
 
 #include <QWidget>
+#include <QString>
 
 class QLabel;
 class QTableWidget;
@@ -12,6 +13,8 @@ class QLineEdit;
 class QTextEdit;
 class QProgressBar;
 class QPushButton;
+class QDateEdit;
+class QTimeEdit;
 
 class RoleWorkspace : public QWidget {
     Q_OBJECT
@@ -19,7 +22,11 @@ class RoleWorkspace : public QWidget {
 public:
     enum class Mode { Formateur, Stagiaire };
     explicit RoleWorkspace(Mode mode, QWidget *parent = nullptr);
-    void setUser(int userId, const QString &firstName, const QString &lastName);
+    void setUser(int userId, const QString &firstName, const QString &lastName,
+                 const QString &email = QString());
+
+signals:
+    void openProfileRequested();
 
 private slots:
     // Formateur actions
@@ -28,14 +35,14 @@ private slots:
     void mettreAJourStatutStagiaire();
     void envoyerSignalementFormateur();
     void exporterFeuilleEmargementPdf();
+    void analyserProgressionAvecIA();
 
     // Stagiaire actions
     void soumettreJustificationStagiaire();
     void envoyerSignalementStagiaire();
     void exporterAttestationFormationPdf();
-
-    // Shared Profile Action
-    void changerMotDePasse();
+    void reserverSalleEtude();
+    void annulerReservationEtude();
 
 private:
     void setupUi();
@@ -54,6 +61,7 @@ private:
     int m_userId = -1;
     QString m_userFirstName;
     QString m_userLastName;
+    QString m_userEmail;
 
     // Common UI
     QLabel *m_welcome = nullptr;
@@ -75,6 +83,7 @@ private:
     QComboBox *m_comboSalleIncidentForm = nullptr;
     QComboBox *m_comboTypeIncidentForm = nullptr;
     QTextEdit *m_editDescIncidentForm = nullptr;
+    QTextEdit *m_aiProgressionResult = nullptr;
 
     // Stagiaire UI components
     QLabel *m_lblStagiaireCours = nullptr;
@@ -88,6 +97,17 @@ private:
     QTextEdit *m_editJustification = nullptr;
     QComboBox *m_comboTypeIncidentStag = nullptr;
     QTextEdit *m_editDescIncidentStag = nullptr;
+
+    // Stagiaire Study Booking & Room Insight
+    QLabel *m_lblSalleHabituelle = nullptr;
+    QLabel *m_lblSalleStatutChangement = nullptr;
+    QTableWidget *m_tableSallesDispos = nullptr;
+    QComboBox *m_comboReservationSalle = nullptr;
+    QDateEdit *m_dateReservation = nullptr;
+    QTimeEdit *m_heureDebutReservation = nullptr;
+    QTimeEdit *m_heureFinReservation = nullptr;
+    QTableWidget *m_tableMesReservations = nullptr;
+    QPushButton *m_btnAnnulerReservation = nullptr;
 };
 
 #endif // ROLEWORKSPACE_H

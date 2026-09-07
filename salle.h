@@ -30,6 +30,10 @@ public:
     bool supprimer();
     static QList<Salle> listerTout();
     static Salle trouverParId(int id);
+    static bool mettreAJourSignalement(int id, const QString &statut,
+                                       const QString &description,
+                                       const QString &auteur);
+    static bool effacerSignalement(int id);
 
 private:
     int m_id = -1;

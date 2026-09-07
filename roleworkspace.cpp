@@ -1,7 +1,15 @@
 #include "roleworkspace.h"
 #include "db.h"
 #include "authentification.h"
+#include "reservation.h"
+#include "cours.h"
+#include "salle.h"
+#include "stagiaire.h"
+#include "moduletools.h"
+#include "emailnotifier.h"
+#include "ollamaassistant.h"
 #include <QFrame>
+#include <QCoreApplication>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -10,7 +18,6 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QSqlQuery>
-#include <QSqlError>
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QTextEdit>
@@ -18,14 +25,14 @@
 #include <QDoubleSpinBox>
 #include <QComboBox>
 #include <QDate>
+#include <QDateEdit>
+#include <QTimeEdit>
 #include <QVBoxLayout>
 #include <QFileDialog>
 #include <QDir>
 #include <QPdfWriter>
 #include <QPainter>
 #include <QPageSize>
-#include <QDialog>
-#include <QFormLayout>
 
 RoleWorkspace::RoleWorkspace(Mode mode, QWidget *parent)
     : QWidget(parent), m_mode(mode)
@@ -62,13 +69,14 @@ void RoleWorkspace::setupUi() {
     m_welcome = new QLabel(hero);
     m_welcome->setStyleSheet("color:white;font-size:20pt;font-weight:800;");
     
-    auto *btnPwd = new QPushButton("🔑  Modifier mon mot de passe", hero);
-    btnPwd->setStyleSheet("background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 6px 14px; font-weight: 600; font-size: 9.5pt;");
-    connect(btnPwd, &QPushButton::clicked, this, &RoleWorkspace::changerMotDePasse);
+    auto *btnProfil = new QPushButton("Mon Profil", hero);
+    btnProfil->setIcon(ModuleTools::standardIcon(QStyle::SP_FileDialogInfoView));
+    btnProfil->setStyleSheet("background: rgba(255,255,255,0.18); color: white; border: 1px solid rgba(255,255,255,0.35); border-radius: 8px; padding: 7px 16px; font-weight: bold; font-size: 10pt;");
+    connect(btnProfil, &QPushButton::clicked, this, &RoleWorkspace::openProfileRequested);
 
     topBarHero->addWidget(m_welcome);
     topBarHero->addStretch();
-    topBarHero->addWidget(btnPwd);
+    topBarHero->addWidget(btnProfil);
     heroLayout->addLayout(topBarHero);
 
     auto *description = new QLabel(m_mode == Mode::Formateur 
@@ -149,6 +157,7 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
     m_spinHeuresSession->setSingleStep(0.5);
     m_spinHeuresSession->setValue(2.0);
     m_spinHeuresSession->setSuffix(" h");
+    m_spinHeuresSession->setMinimumWidth(120);
     sessionBarLayout->addWidget(m_spinHeuresSession);
 
     sessionBarLayout->addSpacing(15);
@@ -168,14 +177,17 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
     m_tablePresences->setShowGrid(false);
     m_tablePresences->setAlternatingRowColors(true);
     layoutSession->addWidget(m_tablePresences, 1);
+    layoutSession->addWidget(ModuleTools::createPaginationControls(m_tablePresences, 8));
 
     auto *btnRowSession = new QHBoxLayout();
-    auto *btnPdfSession = new QPushButton("📄  Exporter Feuille d'Émargement PDF", tabSession);
+    auto *btnPdfSession = new QPushButton("Exporter Feuille d'Émargement PDF", tabSession);
+    btnPdfSession->setIcon(ModuleTools::standardIcon(QStyle::SP_DialogSaveButton));
     btnPdfSession->setObjectName("btnVider");
     btnPdfSession->setStyleSheet("padding: 10px 18px; font-weight: 600;");
     connect(btnPdfSession, &QPushButton::clicked, this, &RoleWorkspace::exporterFeuilleEmargementPdf);
 
-    auto *btnValidation = new QPushButton("✅  Valider la Séance & Créditer les Heures aux Présents", tabSession);
+    auto *btnValidation = new QPushButton("Valider la Séance & Créditer les Heures aux Présents", tabSession);
+    btnValidation->setIcon(ModuleTools::standardIcon(QStyle::SP_DialogApplyButton));
     btnValidation->setStyleSheet("background: #0284c7; color: white; font-weight: bold; font-size: 10.5pt; padding: 10px 22px; border-radius: 8px;");
     connect(btnValidation, &QPushButton::clicked, this, &RoleWorkspace::validerSeanceEtPresences);
 
@@ -184,7 +196,8 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
     btnRowSession->addWidget(btnValidation);
     layoutSession->addLayout(btnRowSession);
 
-    tabWidget->addTab(tabSession, "📋 Émargement & Conduite de Séance");
+    tabWidget->addTab(tabSession, "Émargement & Conduite de Séance");
+    tabWidget->setTabIcon(0, ModuleTools::standardIcon(QStyle::SP_FileDialogDetailedView));
 
     // --- TAB 2: Suivi & Validation des Compétences ---
     auto *tabSuivi = new QWidget();
@@ -206,6 +219,7 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
     m_tableStagiairesSuivi->verticalHeader()->setVisible(false);
     m_tableStagiairesSuivi->setAlternatingRowColors(true);
     layoutSuivi->addWidget(m_tableStagiairesSuivi, 1);
+    layoutSuivi->addWidget(ModuleTools::createPaginationControls(m_tableStagiairesSuivi, 8));
 
     auto *actionSuivi = new QHBoxLayout();
     actionSuivi->addWidget(new QLabel("<b>Changer statut stagiaire sélectionné :</b>"));
@@ -220,7 +234,30 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
     actionSuivi->addStretch();
     layoutSuivi->addLayout(actionSuivi);
 
-    tabWidget->addTab(tabSuivi, "🎯 Suivi & Progression Stagiaires");
+    tabWidget->addTab(tabSuivi, "Suivi & Progression Stagiaires");
+    tabWidget->setTabIcon(1, ModuleTools::standardIcon(QStyle::SP_FileDialogInfoView));
+
+    auto *tabAi = new QWidget();
+    tabAi->setStyleSheet("background:#f8fafc;");
+    auto *layoutAi = new QVBoxLayout(tabAi);
+    layoutAi->setContentsMargins(20, 20, 20, 20);
+    layoutAi->setSpacing(12);
+    auto *aiInfo = new QLabel("Sélectionnez un stagiaire dans le tableau Suivi, puis demandez une analyse locale de sa progression.", tabAi);
+    aiInfo->setWordWrap(true);
+    aiInfo->setStyleSheet("color:#334155;font-size:11pt;font-weight:600;padding:6px;");
+    layoutAi->addWidget(aiInfo);
+    auto *btnAi = new QPushButton("Analyser la progression avec IA locale", tabAi);
+    btnAi->setIcon(ModuleTools::standardIcon(QStyle::SP_FileDialogInfoView));
+    btnAi->setStyleSheet("QPushButton{background:#6d28d9;color:#ffffff;font-weight:bold;padding:10px 18px;border-radius:8px;border:1px solid #5b21b6;}QPushButton:hover{background:#5b21b6;}QPushButton:pressed{background:#4c1d95;}");
+    connect(btnAi, &QPushButton::clicked, this, &RoleWorkspace::analyserProgressionAvecIA);
+    layoutAi->addWidget(btnAi, 0, Qt::AlignLeft);
+    m_aiProgressionResult = new QTextEdit(tabAi);
+    m_aiProgressionResult->setReadOnly(true);
+    m_aiProgressionResult->setStyleSheet("QTextEdit{background:#ffffff;color:#0f172a;border:1px solid #c4b5fd;border-radius:10px;padding:12px;font-size:11pt;}QTextEdit::placeholder{color:#64748b;}");
+    m_aiProgressionResult->setPlaceholderText("L'analyse apparaîtra ici. Ollama doit être lancé localement.");
+    layoutAi->addWidget(m_aiProgressionResult, 1);
+    tabWidget->addTab(tabAi, "Analyse IA");
+    tabWidget->setTabIcon(3, ModuleTools::standardIcon(QStyle::SP_ComputerIcon));
 
     // --- TAB 3: Signalement Rapide ---
     auto *tabIncident = new QWidget();
@@ -249,15 +286,43 @@ QWidget* RoleWorkspace::createFormateurWorkspace() {
 
     layoutIncident->addLayout(gridIncident);
 
-    auto *btnSendIncident = new QPushButton("⚠️  Transmettre le Signalement à l'Administration", tabIncident);
+    auto *btnSendIncident = new QPushButton("Transmettre le Signalement à l'Administration", tabIncident);
+    btnSendIncident->setIcon(ModuleTools::standardIcon(QStyle::SP_MessageBoxWarning));
     btnSendIncident->setStyleSheet("background: #e11d48; color: white; font-weight: bold; padding: 10px 20px; border-radius: 8px;");
     connect(btnSendIncident, &QPushButton::clicked, this, &RoleWorkspace::envoyerSignalementFormateur);
     layoutIncident->addWidget(btnSendIncident, 0, Qt::AlignRight);
     layoutIncident->addStretch();
 
-    tabWidget->addTab(tabIncident, "⚠️ Signalement & Escalade");
+    tabWidget->addTab(tabIncident, "Signalement & Escalade");
+    tabWidget->setTabIcon(2, ModuleTools::standardIcon(QStyle::SP_MessageBoxWarning));
 
     return tabWidget;
+}
+
+void RoleWorkspace::analyserProgressionAvecIA()
+{
+    const auto selected = m_tableStagiairesSuivi->selectedItems();
+    if (selected.isEmpty()) {
+        m_aiProgressionResult->setPlainText("Sélectionnez d'abord un stagiaire dans l'onglet Suivi & Progression Stagiaires.");
+        return;
+    }
+
+    const int row = m_tableStagiairesSuivi->row(selected.first());
+    const QString trainee = m_tableStagiairesSuivi->item(row, 1)->text();
+    const QString email = m_tableStagiairesSuivi->item(row, 2)->text();
+    const QString hours = m_tableStagiairesSuivi->item(row, 3)->text();
+    const QString progress = m_tableStagiairesSuivi->item(row, 4)->text();
+    const QString status = m_tableStagiairesSuivi->item(row, 5)->text();
+    m_aiProgressionResult->setPlainText("Analyse en cours avec Ollama...");
+    QCoreApplication::processEvents();
+
+    QString error;
+    const QString result = OllamaAssistant::ask(
+        QString("Tu es un assistant pédagogique. Analyse brièvement la progression du stagiaire %1 (%2). "
+                "Heures validées: %3. Progression: %4. Statut: %5. "
+                "Donne trois points: constat, risque éventuel, action recommandée. Réponds en français.")
+            .arg(trainee, email, hours, progress, status), &error);
+    m_aiProgressionResult->setPlainText(result.isEmpty() ? error : result);
 }
 
 // ============================================================================
@@ -318,14 +383,16 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
 
     layoutProg->addWidget(cardSummary);
 
-    m_btnAttestationPdf = new QPushButton("🎓  Télécharger mon Attestation de Formation (PDF)", tabProg);
+    m_btnAttestationPdf = new QPushButton("Télécharger mon Attestation de Formation (PDF)", tabProg);
+    m_btnAttestationPdf->setIcon(ModuleTools::standardIcon(QStyle::SP_DialogSaveButton));
     m_btnAttestationPdf->setStyleSheet("background: #0f766e; color: white; font-weight: bold; padding: 12px 24px; border-radius: 10px; font-size: 10.5pt;");
     m_btnAttestationPdf->setEnabled(false);
     connect(m_btnAttestationPdf, &QPushButton::clicked, this, &RoleWorkspace::exporterAttestationFormationPdf);
     layoutProg->addWidget(m_btnAttestationPdf, 0, Qt::AlignRight);
 
     layoutProg->addStretch();
-    tabWidget->addTab(tabProg, "🚀 Ma Progression & Compétences");
+    tabWidget->addTab(tabProg, "Ma Progression & Compétences");
+    tabWidget->setTabIcon(0, ModuleTools::standardIcon(QStyle::SP_FileDialogDetailedView));
 
     // --- TAB 2: Justification d'Absence ---
     auto *tabJustif = new QWidget();
@@ -345,12 +412,14 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
     m_editJustification->setPlaceholderText("Indiquez la date, le motif d'absence et les détails nécessaires...");
     layoutJustif->addWidget(m_editJustification);
 
-    auto *btnSendJustif = new QPushButton("📨  Transmettre le Justificatif", tabJustif);
+    auto *btnSendJustif = new QPushButton("Transmettre le Justificatif", tabJustif);
+    btnSendJustif->setIcon(ModuleTools::standardIcon(QStyle::SP_ArrowRight));
     btnSendJustif->setStyleSheet("background: #0284c7; color: white; font-weight: bold; padding: 10px 22px; border-radius: 8px;");
     connect(btnSendJustif, &QPushButton::clicked, this, &RoleWorkspace::soumettreJustificationStagiaire);
     layoutJustif->addWidget(btnSendJustif, 0, Qt::AlignRight);
 
-    tabWidget->addTab(tabJustif, "📨 Justification d'Absence");
+    tabWidget->addTab(tabJustif, "Justification d'Absence");
+    tabWidget->setTabIcon(1, ModuleTools::standardIcon(QStyle::SP_FileDialogInfoView));
 
     // --- TAB 3: Signalement Stagiaire ---
     auto *tabIncidentStag = new QWidget();
@@ -375,21 +444,125 @@ QWidget* RoleWorkspace::createStagiaireWorkspace() {
 
     layoutIncidentStag->addLayout(gridIncStag);
 
-    auto *btnSendIncStag = new QPushButton("⚠️  Envoyer le Signalement", tabIncidentStag);
+    auto *btnSendIncStag = new QPushButton("Envoyer le Signalement", tabIncidentStag);
+    btnSendIncStag->setIcon(ModuleTools::standardIcon(QStyle::SP_MessageBoxWarning));
     btnSendIncStag->setStyleSheet("background: #e11d48; color: white; font-weight: bold; padding: 10px 22px; border-radius: 8px;");
     connect(btnSendIncStag, &QPushButton::clicked, this, &RoleWorkspace::envoyerSignalementStagiaire);
     layoutIncidentStag->addWidget(btnSendIncStag, 0, Qt::AlignRight);
     layoutIncidentStag->addStretch();
 
-    tabWidget->addTab(tabIncidentStag, "⚠️ Signalement");
+    tabWidget->addTab(tabIncidentStag, "Signalement");
+    tabWidget->setTabIcon(2, ModuleTools::standardIcon(QStyle::SP_MessageBoxWarning));
+
+    // --- TAB 4: Réservation Salle d'Étude & Repères ---
+    auto *tabBooking = new QWidget();
+    auto *layoutBooking = new QVBoxLayout(tabBooking);
+    layoutBooking->setContentsMargins(22, 22, 22, 22);
+    layoutBooking->setSpacing(14);
+
+    auto *lblBookingTitle = new QLabel("<b>Espaces d'Étude & Réservation de Salle</b>", tabBooking);
+    lblBookingTitle->setStyleSheet("font-size: 13pt; color: #0f172a;");
+    layoutBooking->addWidget(lblBookingTitle);
+
+    // Insight card: Normal study room with formateur + change tracking
+    auto *cardInsight = new QFrame(tabBooking);
+    cardInsight->setStyleSheet("background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px;");
+    auto *layInsight = new QVBoxLayout(cardInsight);
+
+    m_lblSalleHabituelle = new QLabel(cardInsight);
+    m_lblSalleHabituelle->setStyleSheet("font-size: 11pt; color: #0f172a;");
+
+    m_lblSalleStatutChangement = new QLabel(cardInsight);
+    m_lblSalleStatutChangement->setStyleSheet("font-size: 10pt; font-weight: bold; padding: 4px 8px; border-radius: 6px;");
+
+    layInsight->addWidget(m_lblSalleHabituelle);
+    layInsight->addWidget(m_lblSalleStatutChangement);
+    layoutBooking->addWidget(cardInsight);
+
+    // Live available study rooms table
+    auto *lblDispos = new QLabel("<b>Salles disponibles pour étude individuelle ou en groupe :</b>", tabBooking);
+    lblDispos->setStyleSheet("color: #334155; font-size: 10pt;");
+    layoutBooking->addWidget(lblDispos);
+
+    m_tableSallesDispos = new QTableWidget(tabBooking);
+    m_tableSallesDispos->setColumnCount(4);
+    m_tableSallesDispos->setHorizontalHeaderLabels({"ID", "Salle", "Type", "Capacité"});
+    m_tableSallesDispos->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    m_tableSallesDispos->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    m_tableSallesDispos->verticalHeader()->setVisible(false);
+    m_tableSallesDispos->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_tableSallesDispos->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_tableSallesDispos->setAlternatingRowColors(true);
+    layoutBooking->addWidget(m_tableSallesDispos, 1);
+    layoutBooking->addWidget(ModuleTools::createPaginationControls(m_tableSallesDispos, 6));
+
+    // Booking action bar
+    auto *barBooking = new QHBoxLayout();
+    barBooking->addWidget(new QLabel("<b>Salle :</b>", tabBooking));
+    m_comboReservationSalle = new QComboBox(tabBooking);
+    m_comboReservationSalle->setMinimumWidth(200);
+    barBooking->addWidget(m_comboReservationSalle);
+
+    barBooking->addWidget(new QLabel("<b>Date :</b>", tabBooking));
+    m_dateReservation = new QDateEdit(QDate::currentDate(), tabBooking);
+    m_dateReservation->setCalendarPopup(true);
+    m_dateReservation->setMinimumWidth(125);
+    barBooking->addWidget(m_dateReservation);
+
+    barBooking->addWidget(new QLabel("<b>De :</b>", tabBooking));
+    m_heureDebutReservation = new QTimeEdit(QTime(9, 0), tabBooking);
+    m_heureDebutReservation->setMinimumWidth(95);
+    barBooking->addWidget(m_heureDebutReservation);
+
+    barBooking->addWidget(new QLabel("<b>À :</b>", tabBooking));
+    m_heureFinReservation = new QTimeEdit(QTime(11, 0), tabBooking);
+    m_heureFinReservation->setMinimumWidth(95);
+    barBooking->addWidget(m_heureFinReservation);
+
+    auto *btnReserver = new QPushButton("Confirmer ma Réservation d'Étude", tabBooking);
+    btnReserver->setIcon(ModuleTools::standardIcon(QStyle::SP_DialogApplyButton));
+    btnReserver->setStyleSheet("background: #0284c7; color: white; font-weight: bold; padding: 8px 18px; border-radius: 8px;");
+    connect(btnReserver, &QPushButton::clicked, this, &RoleWorkspace::reserverSalleEtude);
+    barBooking->addWidget(btnReserver);
+    barBooking->addStretch();
+    layoutBooking->addLayout(barBooking);
+
+    auto *lblMyBookings = new QLabel("<b>Mes réservations confirmées :</b>", tabBooking);
+    layoutBooking->addWidget(lblMyBookings);
+    m_tableMesReservations = new QTableWidget(tabBooking);
+    m_tableMesReservations->setColumnCount(6);
+    m_tableMesReservations->setHorizontalHeaderLabels({"ID", "Salle", "Date", "Début", "Fin", "Statut"});
+    m_tableMesReservations->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    m_tableMesReservations->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    m_tableMesReservations->verticalHeader()->setVisible(false);
+    m_tableMesReservations->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_tableMesReservations->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_tableMesReservations->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_tableMesReservations->setAlternatingRowColors(true);
+    m_tableMesReservations->setColumnHidden(0, true);
+    layoutBooking->addWidget(m_tableMesReservations);
+    layoutBooking->addWidget(ModuleTools::createPaginationControls(m_tableMesReservations, 6));
+
+    m_btnAnnulerReservation = new QPushButton("Annuler la réservation sélectionnée", tabBooking);
+    m_btnAnnulerReservation->setObjectName("btnSupprimer");
+    m_btnAnnulerReservation->setEnabled(false);
+    connect(m_tableMesReservations, &QTableWidget::itemSelectionChanged, this, [this] {
+        m_btnAnnulerReservation->setEnabled(!m_tableMesReservations->selectedItems().isEmpty());
+    });
+    connect(m_btnAnnulerReservation, &QPushButton::clicked, this, &RoleWorkspace::annulerReservationEtude);
+    layoutBooking->addWidget(m_btnAnnulerReservation, 0, Qt::AlignRight);
+
+    tabWidget->addTab(tabBooking, "Salle d'Étude & Réservation");
+    tabWidget->setTabIcon(3, ModuleTools::standardIcon(QStyle::SP_DirOpenIcon));
 
     return tabWidget;
 }
 
-void RoleWorkspace::setUser(int id, const QString &firstName, const QString &lastName) {
+void RoleWorkspace::setUser(int id, const QString &firstName, const QString &lastName, const QString &email) {
     m_userId = id;
     m_userFirstName = firstName;
     m_userLastName = lastName;
+    m_userEmail = email;
     m_welcome->setText(QString("Bonjour, %1").arg(firstName));
     refresh();
 }
@@ -413,7 +586,7 @@ void RoleWorkspace::refreshFormateur() {
     query.prepare("SELECT COUNT(*) FROM SALLE WHERE REPORT_AUTHOR LIKE :auth AND REPORT_STATUS = 'RESOLU'");
     query.bindValue(":auth", "%" + m_userFirstName + "%");
     if (query.exec() && query.next() && query.value(0).toInt() > 0) {
-        m_notificationBanner->setText(QString("🔔 Notification : %1 de vos signalements de salle ont été pris en charge et marqués comme RÉSOLUS par l'administration.").arg(query.value(0).toInt()));
+        m_notificationBanner->setText(QString("Notification : %1 de vos signalements de salle ont été pris en charge et marqués comme RÉSOLUS par l'administration.").arg(query.value(0).toInt()));
         m_notificationBanner->setVisible(true);
     } else {
         m_notificationBanner->setVisible(false);
@@ -443,6 +616,7 @@ void RoleWorkspace::refreshFormateur() {
             m_comboFormateurCours->addItem(query.value(1).toString(), query.value(0).toInt());
         }
     }
+    ModuleTools::refreshPagination(m_tablePresences);
     m_comboFormateurCours->blockSignals(false);
 
     // Populate Rooms for Incident combo
@@ -453,6 +627,7 @@ void RoleWorkspace::refreshFormateur() {
             m_comboSalleIncidentForm->addItem(query.value(1).toString(), query.value(0).toInt());
         }
     }
+    ModuleTools::refreshPagination(m_tableStagiairesSuivi);
 
     if (m_comboFormateurCours->count() > 0) {
         onFormateurCoursChanged(0);
@@ -534,16 +709,11 @@ void RoleWorkspace::validerSeanceEtPresences() {
     double heures = m_spinHeuresSession->value();
     int countValidated = 0;
 
-    QSqlQuery query(DB::instance().database());
-
     for (int r = 0; r < m_tablePresences->rowCount(); ++r) {
         int idStagiaire = m_tablePresences->item(r, 0)->text().toInt();
         auto *combo = qobject_cast<QComboBox*>(m_tablePresences->cellWidget(r, 3));
         if (combo && combo->currentText() == "Présent") {
-            query.prepare("UPDATE STAGIAIRE SET HEURES_VALIDEES = NVL(HEURES_VALIDEES, 0) + :h WHERE ID_STAGIAIRE = :id");
-            query.bindValue(":h", heures);
-            query.bindValue(":id", idStagiaire);
-            if (query.exec()) {
+            if (Stagiaire::ajouterHeures(idStagiaire, heures)) {
                 countValidated++;
             }
         }
@@ -567,12 +737,7 @@ void RoleWorkspace::mettreAJourStatutStagiaire() {
     int idStagiaire = m_tableStagiairesSuivi->item(row, 0)->text().toInt();
     QString nouveauStatut = m_comboStatutUpdate->currentText();
 
-    QSqlQuery query(DB::instance().database());
-    query.prepare("UPDATE STAGIAIRE SET STATUT = :st WHERE ID_STAGIAIRE = :id");
-    query.bindValue(":st", nouveauStatut);
-    query.bindValue(":id", idStagiaire);
-
-    if (query.exec()) {
+    if (Stagiaire::mettreAJourStatut(idStagiaire, nouveauStatut)) {
         QMessageBox::information(this, "Statut mis à jour", "Le statut du stagiaire a été mis à jour.");
         onFormateurCoursChanged(m_comboFormateurCours->currentIndex());
     } else {
@@ -589,18 +754,22 @@ void RoleWorkspace::envoyerSignalementFormateur() {
         QMessageBox::warning(this, "Champs requis", "Veuillez préciser la description de l'incident.");
         return;
     }
+    if (salleId <= 0) {
+        QMessageBox::warning(this, "Salle requise", "Aucune salle valide n'est disponible pour ce signalement.");
+        qWarning() << "Formateur report skipped: no valid room selected";
+        return;
+    }
 
     QString incidentComplet = QString("[%1] %2").arg(nature, desc);
 
-    QSqlQuery query(DB::instance().database());
-    query.prepare("UPDATE SALLE SET REPORT_STATUS = 'EN_COURS', REPORT_DESCRIPTION = :desc, "
-                  "REPORT_AUTHOR = :author WHERE ID_SALLE = :id");
-    query.bindValue(":desc", incidentComplet);
-    query.bindValue(":author", QString("%1 %2 (Formateur)").arg(m_userFirstName, m_userLastName));
-    query.bindValue(":id", salleId);
-
-    if (query.exec()) {
+    if (Salle::mettreAJourSignalement(
+            salleId, "EN_COURS", incidentComplet,
+            QString("%1 %2 <%3> (Formateur)").arg(m_userFirstName, m_userLastName, m_userEmail))) {
         QMessageBox::information(this, "Signalement transmis", "L'anomalie a été signalée à l'administration.");
+        if (!EmailNotifier::notifyReportCreated("Salle", m_lblSalleSession->text(), incidentComplet,
+                                                QString("%1 %2").arg(m_userFirstName, m_userLastName), m_userEmail)) {
+            qWarning() << "Notification email non envoyee:" << EmailNotifier::lastError();
+        }
         m_editDescIncidentForm->clear();
     } else {
         QMessageBox::critical(this, "Erreur", "Échec de l'envoi du signalement.");
@@ -610,7 +779,9 @@ void RoleWorkspace::envoyerSignalementFormateur() {
 void RoleWorkspace::exporterFeuilleEmargementPdf() {
     QString coursTitre = m_comboFormateurCours->currentText();
     QString defaultPath = QDir::homePath() + "/Documents/Emargement_" + coursTitre.simplified().replace(' ', '_') + "_" + QDate::currentDate().toString("yyyyMMdd") + ".pdf";
-    QString path = QFileDialog::getSaveFileName(this, "Exporter Feuille d'Émargement", defaultPath, "Fichiers PDF (*.pdf)");
+    QString path = QFileDialog::getSaveFileName(this, "Exporter Feuille d'Émargement", defaultPath,
+                                                "Fichiers PDF (*.pdf)", nullptr,
+                                                QFileDialog::DontUseNativeDialog);
     if (path.isEmpty()) return;
     if (!path.endsWith(".pdf", Qt::CaseInsensitive)) path += ".pdf";
 
@@ -696,7 +867,7 @@ void RoleWorkspace::refreshStagiaire() {
     if (query.exec() && query.next()) {
         QString st = query.value(0).toString();
         if (st.contains("RESOLU", Qt::CaseInsensitive)) {
-            m_notificationBanner->setText("🔔 Notification : Votre justification d'absence a été VALIDÉE et traitée par l'administration.");
+            m_notificationBanner->setText("Notification : Votre justification d'absence a été VALIDÉE et traitée par l'administration.");
             m_notificationBanner->setVisible(true);
         } else if (st.contains("EN_COURS", Qt::CaseInsensitive)) {
             m_notificationBanner->setText("ℹ Information : Votre justificatif ou signalement est en cours d'examen par le formateur.");
@@ -751,14 +922,92 @@ void RoleWorkspace::refreshStagiaire() {
             .arg(QString::number(restant, 'f', 1))
         );
 
+        // Update Room Insight & Study Booking Info
+        if (m_lblSalleHabituelle && m_lblSalleStatutChangement) {
+            QString salleNom = query.value(2).toString();
+            QString formateurNom = query.value(1).toString();
+            QString coursNom = query.value(0).toString();
+
+            m_lblSalleHabituelle->setText(
+                QString("<b>Salle habituelle de cours :</b> <span style='color:#0284c7;'>%1</span> (avec votre formateur <b>%2</b> pour <i>%3</i>)")
+                .arg(salleNom, formateurNom, coursNom)
+            );
+
+            // Check if current assigned room has an active incident/maintenance
+            QSqlQuery qInc(DB::instance().database());
+            qInc.prepare("SELECT STATUT, REPORT_STATUS, REPORT_DESCRIPTION FROM SALLE WHERE ID_SALLE = :sid");
+            qInc.bindValue(":sid", query.value(8));
+            if (qInc.exec() && qInc.next()) {
+                QString roomStatut = qInc.value(0).toString();
+                QString repStatut = qInc.value(1).toString();
+                QString repDesc = qInc.value(2).toString();
+
+                if (roomStatut == "MAINTENANCE" || roomStatut == "HORS_SERVICE" || repStatut == "EN_COURS") {
+                    m_lblSalleStatutChangement->setText(
+                        QString("ATTENTION : Changement ou perturbation en cours sur votre salle habituelle (%1). Motif : %2")
+                        .arg(roomStatut, repDesc.isEmpty() ? "Maintenance technique programmée" : repDesc)
+                    );
+                    m_lblSalleStatutChangement->setStyleSheet("background:#fee2e2; color:#b91c1c; font-weight:bold; padding:6px 10px; border-radius:6px;");
+                } else {
+                    m_lblSalleStatutChangement->setText("Votre salle habituelle est DISPONIBLE et confirmée pour vos prochaines séances.");
+                    m_lblSalleStatutChangement->setStyleSheet("background:#dcfce7; color:#15803d; font-weight:bold; padding:6px 10px; border-radius:6px;");
+                }
+            } else {
+                m_lblSalleStatutChangement->setText("ℹ Aucune perturbation signalée sur vos salles de formation.");
+                m_lblSalleStatutChangement->setStyleSheet("background:#f1f5f9; color:#475569; font-weight:bold; padding:6px 10px; border-radius:6px;");
+            }
+        }
+
+        // Populate available study rooms
+        if (m_tableSallesDispos && m_comboReservationSalle) {
+            m_tableSallesDispos->setRowCount(0);
+            m_comboReservationSalle->clear();
+
+            QSqlQuery qS(DB::instance().database());
+            qS.prepare("SELECT ID_SALLE, NOM_SALLE, TYPE_SALLE, CAPACITE "
+                       "FROM SALLE WHERE STATUT = :statut ORDER BY NOM_SALLE");
+            qS.bindValue(":statut", "DISPONIBLE");
+            if (qS.exec()) {
+                int r = 0;
+                while (qS.next()) {
+                    m_tableSallesDispos->insertRow(r);
+                    m_tableSallesDispos->setItem(r, 0, new QTableWidgetItem(qS.value(0).toString()));
+                    m_tableSallesDispos->setItem(r, 1, new QTableWidgetItem(qS.value(1).toString()));
+                    m_tableSallesDispos->setItem(r, 2, new QTableWidgetItem(qS.value(2).toString()));
+                    m_tableSallesDispos->setItem(r, 3, new QTableWidgetItem(qS.value(3).toString() + " places"));
+
+                    m_comboReservationSalle->addItem(QString("%1 (%2)").arg(qS.value(1).toString(), qS.value(2).toString()), qS.value(0).toInt());
+                    r++;
+                }
+            }
+            ModuleTools::refreshPagination(m_tableSallesDispos);
+        }
+
+        if (m_tableMesReservations) {
+            m_tableMesReservations->setRowCount(0);
+            const QList<Reservation> reservations = Reservation::listerPourStagiaire(m_userId);
+            for (int row = 0; row < reservations.size(); ++row) {
+                const Reservation &reservation = reservations.at(row);
+                m_tableMesReservations->insertRow(row);
+                m_tableMesReservations->setItem(row, 0, new QTableWidgetItem(QString::number(reservation.id())));
+                m_tableMesReservations->setItem(row, 1, new QTableWidgetItem(reservation.salle()));
+                m_tableMesReservations->setItem(row, 2, new QTableWidgetItem(reservation.dateDebut().date().toString("dd/MM/yyyy")));
+                m_tableMesReservations->setItem(row, 3, new QTableWidgetItem(reservation.dateDebut().time().toString("HH:mm")));
+                m_tableMesReservations->setItem(row, 4, new QTableWidgetItem(reservation.dateFin().time().toString("HH:mm")));
+                m_tableMesReservations->setItem(row, 5, new QTableWidgetItem(reservation.statut()));
+            }
+            m_btnAnnulerReservation->setEnabled(false);
+            ModuleTools::refreshPagination(m_tableMesReservations);
+        }
+
         // Enable Attestation button if course hours fulfilled or status is DIPLOME
         bool qualifiesForDiploma = (statut == "DIPLOME") || (total > 0 && done >= total);
         m_btnAttestationPdf->setEnabled(qualifiesForDiploma);
         if (qualifiesForDiploma) {
-            m_btnAttestationPdf->setText("🎓  Télécharger mon Attestation de Formation (PDF Éligible)");
+            m_btnAttestationPdf->setText("Télécharger mon Attestation de Formation (PDF Éligible)");
             m_btnAttestationPdf->setStyleSheet("background: #16a34a; color: white; font-weight: bold; padding: 12px 24px; border-radius: 10px; font-size: 10.5pt;");
         } else {
-            m_btnAttestationPdf->setText(QString("🎓  Attestation de Formation (Disponible à 100%% - Actuel: %1%%)").arg(pct));
+            m_btnAttestationPdf->setText(QString("Attestation de Formation (Disponible à 100%% - Actuel: %1%%)").arg(pct));
             m_btnAttestationPdf->setStyleSheet("background: #94a3b8; color: white; font-weight: bold; padding: 12px 24px; border-radius: 10px; font-size: 10.5pt;");
         }
     }
@@ -766,7 +1015,9 @@ void RoleWorkspace::refreshStagiaire() {
 
 void RoleWorkspace::exporterAttestationFormationPdf() {
     QString defaultPath = QDir::homePath() + "/Documents/Attestation_" + m_userLastName + "_" + m_userFirstName + ".pdf";
-    QString path = QFileDialog::getSaveFileName(this, "Télécharger mon Attestation", defaultPath, "Fichiers PDF (*.pdf)");
+    QString path = QFileDialog::getSaveFileName(this, "Télécharger mon Attestation", defaultPath,
+                                                "Fichiers PDF (*.pdf)", nullptr,
+                                                QFileDialog::DontUseNativeDialog);
     if (path.isEmpty()) return;
     if (!path.endsWith(".pdf", Qt::CaseInsensitive)) path += ".pdf";
 
@@ -1040,19 +1291,16 @@ void RoleWorkspace::soumettreJustificationStagiaire() {
         return;
     }
 
-    QSqlQuery query(DB::instance().database());
-    query.prepare(
-        "UPDATE COURS SET REPORT_STATUS = 'EN_COURS', "
-        "REPORT_DESCRIPTION = :desc, "
-        "REPORT_AUTHOR = :author "
-        "WHERE ID_COURS = (SELECT ID_COURS FROM STAGIAIRE WHERE ID_STAGIAIRE = :id)"
-    );
-    query.bindValue(":desc", QString("[Demande Absence / Justificatif] %1").arg(texte));
-    query.bindValue(":author", QString("%1 %2 (Stagiaire)").arg(m_userFirstName, m_userLastName));
-    query.bindValue(":id", m_userId);
-
-    if (query.exec()) {
+    QSqlQuery courseQuery(DB::instance().database());
+    courseQuery.prepare("SELECT ID_COURS FROM STAGIAIRE WHERE ID_STAGIAIRE = :id");
+    courseQuery.bindValue(":id", m_userId);
+    if (courseQuery.exec() && courseQuery.next() && Cours::mettreAJourSignalement(
+            courseQuery.value(0).toInt(), "EN_COURS",
+            QString("[Demande Absence / Justificatif] %1").arg(texte),
+            QString("%1 %2 <%3> (Stagiaire)").arg(m_userFirstName, m_userLastName, m_userEmail))) {
         QMessageBox::information(this, "Justificatif envoyé", "Votre justification d'absence a été transmise à votre formateur.");
+        EmailNotifier::notifyReportCreated("Cours", "Cours du stagiaire", texte,
+                                           QString("%1 %2").arg(m_userFirstName, m_userLastName), m_userEmail);
         m_editJustification->clear();
         refreshStagiaire();
     } else {
@@ -1069,98 +1317,77 @@ void RoleWorkspace::envoyerSignalementStagiaire() {
         return;
     }
 
-    QSqlQuery query(DB::instance().database());
-    query.prepare(
-        "UPDATE SALLE SET REPORT_STATUS = 'EN_COURS', "
-        "REPORT_DESCRIPTION = :desc, "
-        "REPORT_AUTHOR = :author "
-        "WHERE ID_SALLE = (SELECT ID_SALLE_ATTITREE FROM STAGIAIRE WHERE ID_STAGIAIRE = :id)"
-    );
-    query.bindValue(":desc", QString("[%1] %2").arg(type, desc));
-    query.bindValue(":author", QString("%1 %2 (Stagiaire)").arg(m_userFirstName, m_userLastName));
-    query.bindValue(":id", m_userId);
-
-    if (query.exec()) {
+    QSqlQuery roomQuery(DB::instance().database());
+    roomQuery.prepare("SELECT ID_SALLE_ATTITREE FROM STAGIAIRE WHERE ID_STAGIAIRE = :id");
+    roomQuery.bindValue(":id", m_userId);
+    if (roomQuery.exec() && roomQuery.next() && Salle::mettreAJourSignalement(
+            roomQuery.value(0).toInt(), "EN_COURS", QString("[%1] %2").arg(type, desc),
+            QString("%1 %2 <%3> (Stagiaire)").arg(m_userFirstName, m_userLastName, m_userEmail))) {
         QMessageBox::information(this, "Signalement envoyé", "Votre signalement a été transmis à l'équipe technique.");
+        EmailNotifier::notifyReportCreated("Salle", "Salle attribuée", desc,
+                                           QString("%1 %2").arg(m_userFirstName, m_userLastName), m_userEmail);
         m_editDescIncidentStag->clear();
     } else {
         QMessageBox::critical(this, "Erreur", "Échec lors de l'envoi du signalement.");
     }
 }
 
-// ============================================================================
-// SELF-SERVICE PASSWORD CHANGE
-// ============================================================================
-void RoleWorkspace::changerMotDePasse() {
-    QDialog dlg(this);
-    dlg.setWindowTitle("Changement de mot de passe");
-    dlg.resize(380, 220);
 
-    auto *lay = new QVBoxLayout(&dlg);
-    auto *form = new QFormLayout();
+void RoleWorkspace::reserverSalleEtude() {
+    if (m_comboReservationSalle->count() == 0) {
+        QMessageBox::warning(this, "Réservation", "Aucune salle disponible pour réservation.");
+        return;
+    }
 
-    auto *editActuel = new QLineEdit(&dlg); editActuel->setEchoMode(QLineEdit::Password);
-    auto *editNouveau = new QLineEdit(&dlg); editNouveau->setEchoMode(QLineEdit::Password);
-    auto *editConfirmer = new QLineEdit(&dlg); editConfirmer->setEchoMode(QLineEdit::Password);
+    int idSalle = m_comboReservationSalle->currentData().toInt();
+    QString nomSalle = m_comboReservationSalle->currentText();
+    const QDate date = m_dateReservation->date();
+    const QTime heureDebut = m_heureDebutReservation->time();
+    const QTime heureFin = m_heureFinReservation->time();
+    if (heureFin <= heureDebut) {
+        QMessageBox::warning(this, "Réservation", "L'heure de fin doit être postérieure à l'heure de début.");
+        return;
+    }
 
-    form->addRow("Mot de passe actuel :", editActuel);
-    form->addRow("Nouveau mot de passe :", editNouveau);
-    form->addRow("Confirmer le mot de passe :", editConfirmer);
-    lay->addLayout(form);
+    const QDateTime debut(date, heureDebut);
+    const QDateTime fin(date, heureFin);
+    if (debut <= QDateTime::currentDateTime()) {
+        QMessageBox::warning(this, "Réservation", "Une réservation doit commencer dans le futur.");
+        return;
+    }
 
-    auto *btnRow = new QHBoxLayout();
-    auto *btnAnnuler = new QPushButton("Annuler", &dlg);
-    auto *btnValider = new QPushButton("Modifier mon mot de passe", &dlg);
-    btnValider->setStyleSheet("background: #0284c7; color: white; font-weight: bold; padding: 6px 14px; border-radius: 6px;");
+    QString errorMessage;
+    if (Reservation::reserver(m_userId, idSalle, debut, fin, &errorMessage)) {
+        QMessageBox::information(this, "Réservation confirmée",
+            QString("Votre réservation d'étude pour la salle <b>%1</b> le %2 de %3 à %4 a été enregistrée.")
+                .arg(nomSalle, date.toString("dd/MM/yyyy"), heureDebut.toString("HH:mm"), heureFin.toString("HH:mm")));
+        refreshStagiaire();
+    } else {
+        QMessageBox::warning(this, "Réservation impossible", errorMessage);
+    }
+}
 
-    connect(btnAnnuler, &QPushButton::clicked, &dlg, &QDialog::reject);
-    connect(btnValider, &QPushButton::clicked, [&]() {
-        if (editActuel->text().isEmpty() || editNouveau->text().isEmpty()) {
-            QMessageBox::warning(&dlg, "Validation", "Veuillez remplir tous les champs.");
-            return;
-        }
-        if (editNouveau->text() != editConfirmer->text()) {
-            QMessageBox::warning(&dlg, "Validation", "Les nouveaux mots de passe ne correspondent pas.");
-            return;
-        }
+void RoleWorkspace::annulerReservationEtude()
+{
+    const QList<QTableWidgetItem *> selected = m_tableMesReservations->selectedItems();
+    if (selected.isEmpty()) {
+        return;
+    }
 
-        QString hashActuel = Authentification::hashPassword(editActuel->text());
-        QString hashNouveau = Authentification::hashPassword(editNouveau->text());
+    const int row = m_tableMesReservations->row(selected.first());
+    const int idReservation = m_tableMesReservations->item(row, 0)->text().toInt();
+    const QString salle = m_tableMesReservations->item(row, 1)->text();
+    if (QMessageBox::question(this, "Annuler la réservation",
+                              QString("Annuler la réservation de la salle <b>%1</b> ?").arg(salle),
+                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes) {
+        return;
+    }
 
-        QSqlQuery checkQuery(DB::instance().database());
-        if (m_mode == Mode::Formateur) {
-            checkQuery.prepare("SELECT COUNT(*) FROM FORMATEUR WHERE ID_FORMATEUR = :id AND PASSWORD_HASH = :pwd");
-        } else {
-            checkQuery.prepare("SELECT COUNT(*) FROM STAGIAIRE WHERE ID_STAGIAIRE = :id AND PASSWORD_HASH = :pwd");
-        }
-        checkQuery.bindValue(":id", m_userId);
-        checkQuery.bindValue(":pwd", hashActuel);
-
-        if (!checkQuery.exec() || !checkQuery.next() || checkQuery.value(0).toInt() == 0) {
-            QMessageBox::warning(&dlg, "Erreur", "Le mot de passe actuel est incorrect.");
-            return;
-        }
-
-        QSqlQuery updateQuery(DB::instance().database());
-        if (m_mode == Mode::Formateur) {
-            updateQuery.prepare("UPDATE FORMATEUR SET PASSWORD_HASH = :pwd WHERE ID_FORMATEUR = :id");
-        } else {
-            updateQuery.prepare("UPDATE STAGIAIRE SET PASSWORD_HASH = :pwd WHERE ID_STAGIAIRE = :id");
-        }
-        updateQuery.bindValue(":pwd", hashNouveau);
-        updateQuery.bindValue(":id", m_userId);
-
-        if (updateQuery.exec()) {
-            QMessageBox::information(&dlg, "Succès", "Votre mot de passe a été modifié avec succès !");
-            dlg.accept();
-        } else {
-            QMessageBox::critical(&dlg, "Erreur", "Échec lors de la mise à jour du mot de passe.");
-        }
-    });
-
-    btnRow->addWidget(btnAnnuler);
-    btnRow->addWidget(btnValider);
-    lay->addLayout(btnRow);
-
-    dlg.exec();
+    QString errorMessage;
+    if (!Reservation::annuler(idReservation, m_userId, &errorMessage)) {
+        QMessageBox::warning(this, "Annulation impossible", errorMessage);
+        return;
+    }
+    QMessageBox::information(this, "Réservation annulée", "La réservation a été annulée.");
+    refreshStagiaire();
 }

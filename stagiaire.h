@@ -71,6 +71,8 @@ public:
 
     static QList<Stagiaire> listerTout();
     static Stagiaire trouverParId(int id);
+    static bool ajouterHeures(int id, double heures);
+    static bool mettreAJourStatut(int id, const QString &statut);
 
 private:
     int m_id = -1;

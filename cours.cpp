@@ -145,3 +145,25 @@ Cours Cours::trouverParId(int id)
 
     return Cours();
 }
+
+bool Cours::mettreAJourSignalement(int id, const QString &statut,
+                                   const QString &description, const QString &auteur)
+{
+    QSqlQuery query(DB::instance().database());
+    query.prepare("UPDATE COURS SET REPORT_STATUS = :statut, REPORT_DESCRIPTION = :description, "
+                  "REPORT_AUTHOR = :auteur WHERE ID_COURS = :id");
+    query.bindValue(":statut", statut);
+    query.bindValue(":description", description);
+    query.bindValue(":auteur", auteur);
+    query.bindValue(":id", id);
+    return query.exec();
+}
+
+bool Cours::effacerSignalement(int id)
+{
+    QSqlQuery query(DB::instance().database());
+    query.prepare("UPDATE COURS SET REPORT_STATUS = 'NONE', REPORT_DESCRIPTION = NULL, "
+                  "REPORT_AUTHOR = NULL WHERE ID_COURS = :id");
+    query.bindValue(":id", id);
+    return query.exec();
+}

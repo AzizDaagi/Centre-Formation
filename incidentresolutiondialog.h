@@ -6,6 +6,7 @@
 class QTableWidget;
 class QComboBox;
 class QPushButton;
+class QTextEdit;
 
 class IncidentResolutionDialog : public QDialog {
     Q_OBJECT
@@ -27,6 +28,7 @@ private:
     QPushButton *m_btnEnCours;
     QPushButton *m_btnSupprimer;
     QComboBox *m_filterType;
+    QTextEdit *m_detailDescription;
 };
 
 #endif // INCIDENTRESOLUTIONDIALOG_H

@@ -1,5 +1,9 @@
 #include "incidentresolutiondialog.h"
 #include "db.h"
+#include "cours.h"
+#include "salle.h"
+#include "moduletools.h"
+#include "emailnotifier.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -9,13 +13,13 @@
 #include <QComboBox>
 #include <QMessageBox>
 #include <QSqlQuery>
-#include <QSqlError>
+#include <QTextEdit>
 
 IncidentResolutionDialog::IncidentResolutionDialog(QWidget *parent)
     : QDialog(parent)
 {
     setWindowTitle("CentrePro — Centre de Résolution des Incidents & Justifications");
-    resize(850, 480);
+    resize(900, 680);
     setupUi();
     rafraichirIncidents();
 }
@@ -26,7 +30,7 @@ void IncidentResolutionDialog::setupUi() {
     layout->setSpacing(14);
 
     auto *headerLayout = new QHBoxLayout();
-    auto *title = new QLabel("<h3>⚠️ Gestion & Résolution des Signalements (Salles & Cours)</h3>", this);
+    auto *title = new QLabel("<h3>Gestion & Résolution des Signalements (Salles & Cours)</h3>", this);
     m_filterType = new QComboBox(this);
     m_filterType->addItems({"Tous les types", "SALLE", "COURS"});
     connect(m_filterType, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &IncidentResolutionDialog::rafraichirIncidents);
@@ -49,20 +53,35 @@ void IncidentResolutionDialog::setupUi() {
     m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_table->verticalHeader()->setVisible(false);
     m_table->setAlternatingRowColors(true);
+    m_table->setMinimumHeight(260);
     layout->addWidget(m_table, 1);
+    layout->addWidget(ModuleTools::createPaginationControls(m_table, 6));
+
+    m_detailDescription = new QTextEdit(this);
+    m_detailDescription->setReadOnly(true);
+    m_detailDescription->setPlaceholderText("Sélectionnez un signalement pour lire sa description complète.");
+    m_detailDescription->setMinimumHeight(130);
+    layout->addWidget(m_detailDescription);
+    connect(m_table, &QTableWidget::itemSelectionChanged, this, [this] {
+        const auto selected = m_table->selectedItems();
+        m_detailDescription->setPlainText(selected.isEmpty() ? QString() : m_table->item(m_table->row(selected.first()), 3)->text());
+    });
 
     auto *actionBar = new QHBoxLayout();
     actionBar->setSpacing(10);
 
-    m_btnResolu = new QPushButton("✔  Marquer comme Résolu / Validé", this);
+    m_btnResolu = new QPushButton("Marquer comme Résolu / Validé", this);
+    m_btnResolu->setIcon(ModuleTools::standardIcon(QStyle::SP_DialogApplyButton));
     m_btnResolu->setStyleSheet("background: #16a34a; color: white; font-weight: bold; padding: 8px 16px; border-radius: 8px;");
     connect(m_btnResolu, &QPushButton::clicked, this, &IncidentResolutionDialog::resoudreSelection);
 
-    m_btnEnCours = new QPushButton("⏳  Prendre en Charge (En cours)", this);
+    m_btnEnCours = new QPushButton("Prendre en Charge (En cours)", this);
+    m_btnEnCours->setIcon(ModuleTools::standardIcon(QStyle::SP_BrowserReload));
     m_btnEnCours->setStyleSheet("background: #0284c7; color: white; font-weight: bold; padding: 8px 16px; border-radius: 8px;");
     connect(m_btnEnCours, &QPushButton::clicked, this, &IncidentResolutionDialog::marquerEnCoursSelection);
 
-    m_btnSupprimer = new QPushButton("🗑  Clôturer & Effacer", this);
+    m_btnSupprimer = new QPushButton("Clôturer & Effacer", this);
+    m_btnSupprimer->setIcon(ModuleTools::standardIcon(QStyle::SP_TrashIcon));
     m_btnSupprimer->setStyleSheet("background: #e11d48; color: white; font-weight: bold; padding: 8px 16px; border-radius: 8px;");
     connect(m_btnSupprimer, &QPushButton::clicked, this, &IncidentResolutionDialog::supprimerSignalementSelection);
 
@@ -82,6 +101,7 @@ void IncidentResolutionDialog::setupUi() {
 
 void IncidentResolutionDialog::rafraichirIncidents() {
     m_table->setRowCount(0);
+    m_detailDescription->clear();
     QString filter = m_filterType->currentText();
 
     QSqlQuery query(DB::instance().database());
@@ -103,7 +123,8 @@ void IncidentResolutionDialog::rafraichirIncidents() {
     }
     sql += " ORDER BY TYPE_OBJET, ID_OBJET";
 
-    if (query.exec(sql)) {
+    query.prepare(sql);
+    if (query.exec()) {
         int row = 0;
         while (query.next()) {
             m_table->insertRow(row);
@@ -126,6 +147,7 @@ void IncidentResolutionDialog::rafraichirIncidents() {
             row++;
         }
     }
+    ModuleTools::refreshPagination(m_table);
 }
 
 void IncidentResolutionDialog::resoudreSelection() {
@@ -150,31 +172,30 @@ void IncidentResolutionDialog::executerMiseAJour(const QString &nouveauStatut, b
     int row = m_table->row(sel.first());
     int idObjet = m_table->item(row, 0)->text().toInt();
     QString typeObjet = m_table->item(row, 1)->text();
+    const QString description = m_table->item(row, 3)->text();
+    const QString auteur = m_table->item(row, 4)->text();
 
-    QSqlQuery query(DB::instance().database());
     bool ok = false;
 
     if (typeObjet == "SALLE") {
         if (effacerComplet) {
-            query.prepare("UPDATE SALLE SET REPORT_STATUS = 'NONE', REPORT_DESCRIPTION = NULL, REPORT_AUTHOR = NULL WHERE ID_SALLE = :id");
+            ok = Salle::effacerSignalement(idObjet);
         } else {
-            query.prepare("UPDATE SALLE SET REPORT_STATUS = :st WHERE ID_SALLE = :id");
-            query.bindValue(":st", nouveauStatut);
+            ok = Salle::mettreAJourSignalement(idObjet, nouveauStatut, description, auteur);
         }
-        query.bindValue(":id", idObjet);
-        ok = query.exec();
     } else if (typeObjet == "COURS") {
         if (effacerComplet) {
-            query.prepare("UPDATE COURS SET REPORT_STATUS = 'NONE', REPORT_DESCRIPTION = NULL, REPORT_AUTHOR = NULL WHERE ID_COURS = :id");
+            ok = Cours::effacerSignalement(idObjet);
         } else {
-            query.prepare("UPDATE COURS SET REPORT_STATUS = :st WHERE ID_COURS = :id");
-            query.bindValue(":st", nouveauStatut);
+            ok = Cours::mettreAJourSignalement(idObjet, nouveauStatut, description, auteur);
         }
-        query.bindValue(":id", idObjet);
-        ok = query.exec();
     }
 
     if (ok) {
+        if (!effacerComplet) {
+            EmailNotifier::notifyReportResolved(typeObjet, m_table->item(row, 2)->text(),
+                                                description, auteur, nouveauStatut);
+        }
         QMessageBox::information(this, "Statut mis à jour", QString("Le signalement a été marqué comme : %1").arg(nouveauStatut));
         rafraichirIncidents();
     } else {

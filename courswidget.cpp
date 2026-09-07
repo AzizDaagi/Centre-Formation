@@ -53,7 +53,9 @@ QWidget* CoursWidget::creerPageListe(){
     m_chart=new QChartView(); m_chart->setMinimumHeight(210);
     QPushButton *pdf=new QPushButton("Exporter PDF"); pdf->setObjectName("btnVider"); bar->insertWidget(1,pdf);
     connect(pdf,&QPushButton::clicked,this,[this]{ ModuleTools::exportTableToPdf(m_tableCours,"Rapport des cours"); });
-    cl->addLayout(hdr); cl->addWidget(tools); cl->addWidget(m_tableCours); cl->addWidget(m_chart); cl->addLayout(bar); lay->addWidget(card); return page;
+    cl->addLayout(hdr); cl->addWidget(tools); cl->addWidget(m_tableCours);
+    cl->addWidget(ModuleTools::createPaginationControls(m_tableCours));
+    cl->addWidget(m_chart); cl->addLayout(bar); lay->addWidget(card); return page;
 }
 QWidget* CoursWidget::creerPageFormulaire(){
     QWidget* page=new QWidget(); QVBoxLayout* lay=new QVBoxLayout(page); lay->setContentsMargins(0,0,0,0);
@@ -98,6 +100,7 @@ void CoursWidget::rafraichirTable(){
     }
     m_lblCount->setText(QString::number(list.size())+" cours"); mettreAJourBoutonsListe();
     ModuleTools::updateCategoryChart(m_chart,m_tableCours,3,"Répartition des cours par formateur");
+    ModuleTools::refreshPagination(m_tableCours);
 }
 void CoursWidget::afficherListe(){ retourListe(); rafraichirTable(); }
 void CoursWidget::afficherFormulaireAjout(){ ouvrirFormulaireAjout(); }

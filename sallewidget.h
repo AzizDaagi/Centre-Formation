@@ -9,6 +9,7 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QStackedWidget>
+#include <QTextEdit>
 
 class SalleWidget : public QWidget {
     Q_OBJECT
@@ -24,6 +25,7 @@ private slots:
     void ouvrirFormulaireModification();
     void enregistrer();
     void supprimerSalle();
+    void annulerReservation();
     void onSelectionChanged();
     void retourListe();
 
@@ -32,6 +34,7 @@ private:
     QWidget* creerPageListe();
     QWidget* creerPageFormulaire();
     void remplirFormulaire(int id);
+    void rafraichirReservations();
     void mettreAJourBoutonsListe();
 
     QStackedWidget* m_stack;
@@ -49,6 +52,9 @@ private:
     QComboBox*     m_comboStatut;
     QPushButton*   m_btnEnregistrer;
     QPushButton*   m_btnAnnuler;
+    QTableWidget*  m_tableReservations;
+    QPushButton*   m_btnAnnulerReservation;
+        QTextEdit* m_aiRoomResult = nullptr;
 
     int  m_idSalleSelectionnee = -1;
     bool m_modeAjout = true;

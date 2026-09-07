@@ -6,10 +6,20 @@
 #include <QDebug>
 
 #include <QMessageBox>
+#include <QPalette>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
+    QPalette dialogPalette;
+    dialogPalette.setColor(QPalette::Window, QColor("#ffffff"));
+    dialogPalette.setColor(QPalette::Base, QColor("#ffffff"));
+    dialogPalette.setColor(QPalette::Text, QColor("#0f172a"));
+    dialogPalette.setColor(QPalette::WindowText, QColor("#0f172a"));
+    dialogPalette.setColor(QPalette::Button, QColor("#0284c7"));
+    dialogPalette.setColor(QPalette::ButtonText, QColor("#ffffff"));
+    a.setPalette(dialogPalette);
 
     // 1. Load stylesheet (adjust path if using Qt Resource file like ":/style.qss")
     QFile styleFile(":/style.qss");

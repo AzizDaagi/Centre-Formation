@@ -56,7 +56,9 @@ QWidget* FormateurWidget::creerPageListe(){
     m_chart=new QChartView(); m_chart->setMinimumHeight(210);
     QPushButton *pdf=new QPushButton("Exporter PDF"); pdf->setObjectName("btnVider"); bar->insertWidget(1,pdf);
     connect(pdf,&QPushButton::clicked,this,[this]{ ModuleTools::exportTableToPdf(m_tableFormateurs,"Rapport des formateurs"); });
-    cl->addLayout(hdr); cl->addWidget(tools); cl->addWidget(m_tableFormateurs); cl->addWidget(m_chart); cl->addLayout(bar); lay->addWidget(card); return page;
+    cl->addLayout(hdr); cl->addWidget(tools); cl->addWidget(m_tableFormateurs);
+    cl->addWidget(ModuleTools::createPaginationControls(m_tableFormateurs));
+    cl->addWidget(m_chart); cl->addLayout(bar); lay->addWidget(card); return page;
 }
 QWidget* FormateurWidget::creerPageFormulaire(){
     QWidget* page=new QWidget(); QVBoxLayout* lay=new QVBoxLayout(page); lay->setContentsMargins(0,0,0,0);
@@ -104,6 +106,7 @@ void FormateurWidget::rafraichirTable(){
     }
     m_lblCount->setText(QString::number(list.size())+" formateur"+(list.size()>1?"s":""));
     ModuleTools::updateCategoryChart(m_chart,m_tableFormateurs,4,"Répartition des formateurs par rôle");
+    ModuleTools::refreshPagination(m_tableFormateurs);
     mettreAJourBoutonsListe();
 }
 void FormateurWidget::afficherListe(){ retourListe(); rafraichirTable(); }
@@ -140,7 +143,9 @@ void FormateurWidget::enregistrer(){
     QString nom=m_editNom->text().trimmed(), prenom=m_editPrenom->text().trimmed(), email=m_editEmail->text().trimmed(), pwd=m_editPassword->text();
     mark(m_editNom,nom.isEmpty()); if(nom.isEmpty()) valid=false;
     mark(m_editPrenom,prenom.isEmpty()); if(prenom.isEmpty()) valid=false;
-    mark(m_editEmail,email.isEmpty()); if(email.isEmpty()) valid=false;
+    const bool invalidEmail = email.isEmpty() || !ModuleTools::isValidEmail(email);
+    mark(m_editEmail,invalidEmail); if(invalidEmail) valid=false;
+    if (invalidEmail) m_editEmail->setPlaceholderText("Adresse email invalide");
     if(m_modeAjout&&pwd.isEmpty()){ m_editPassword->setStyleSheet("border:1.5px solid #f43f5e;border-radius:8px;"); m_editPassword->setPlaceholderText("Mot de passe requis"); valid=false; }
     else m_editPassword->setStyleSheet("");
     if(!valid) return;

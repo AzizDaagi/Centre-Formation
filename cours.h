@@ -42,6 +42,10 @@ public:
 
     static QList<Cours> listerTout();
     static Cours trouverParId(int id);
+    static bool mettreAJourSignalement(int id, const QString &statut,
+                                       const QString &description,
+                                       const QString &auteur);
+    static bool effacerSignalement(int id);
 
 private:
     int m_id = -1;

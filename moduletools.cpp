@@ -1,8 +1,8 @@
 #include "moduletools.h"
 
+#include <QApplication>
 #include <QComboBox>
 #include <QDateTime>
-#include <QDesktopServices>
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -12,16 +12,65 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPainter>
+#include <QPixmap>
 #include <QPageLayout>
 #include <QPageSize>
 #include <QPdfWriter>
 #include <QTableWidget>
-#include <QUrl>
+#include <QToolButton>
+#include <QLabel>
+#include <QRegularExpression>
+#include <QStyle>
 #include <QtCharts/QChart>
 #include <QtCharts/QChartView>
 #include <QtCharts/QPieSeries>
-#include <QtCharts/QPieSlice>
 #include <algorithm>
+
+namespace {
+class TablePagination : public QObject
+{
+public:
+    TablePagination(QTableWidget *table, int pageSize, QObject *parent = nullptr)
+        : QObject(parent), m_table(table), m_pageSize(qMax(1, pageSize)) {}
+
+    void setControls(QToolButton *previous, QToolButton *next, QLabel *summary)
+    {
+        m_previous = previous;
+        m_next = next;
+        m_summary = summary;
+        connect(m_previous, &QToolButton::clicked, this, [this] {
+            if (m_page > 0) { --m_page; update(); }
+        });
+        connect(m_next, &QToolButton::clicked, this, [this] {
+            if (m_page + 1 < pageCount()) { ++m_page; update(); }
+        });
+        update();
+    }
+
+    void refresh() { m_page = qMin(m_page, qMax(0, pageCount() - 1)); update(); }
+
+private:
+    int pageCount() const { return qMax(1, (m_table->rowCount() + m_pageSize - 1) / m_pageSize); }
+
+    void update()
+    {
+        const int pages = pageCount();
+        const int first = m_page * m_pageSize;
+        for (int row = 0; row < m_table->rowCount(); ++row)
+            m_table->setRowHidden(row, row < first || row >= first + m_pageSize);
+        m_previous->setEnabled(m_page > 0);
+        m_next->setEnabled(m_page + 1 < pages);
+        m_summary->setText(QString("Page %1 / %2").arg(m_page + 1).arg(pages));
+    }
+
+    QTableWidget *m_table;
+    QToolButton *m_previous = nullptr;
+    QToolButton *m_next = nullptr;
+    QLabel *m_summary = nullptr;
+    int m_page = 0;
+    int m_pageSize;
+};
+}
 
 QWidget *ModuleTools::createMultiCriteriaTools(QTableWidget *table,
                                                const QVector<int> &criteriaColumns,
@@ -127,7 +176,9 @@ void ModuleTools::updateCategoryChart(QChartView *chartView, QTableWidget *table
 bool ModuleTools::exportTableToPdf(QTableWidget *table, const QString &title, QString *outputPath)
 {
     const QString defaultPath = QDir::homePath() + "/Documents/" + title.simplified().replace(' ', '_') + ".pdf";
-    QString path = QFileDialog::getSaveFileName(table, "Exporter le rapport PDF", defaultPath, "Documents PDF (*.pdf)");
+    QString path = QFileDialog::getSaveFileName(table, "Exporter le rapport PDF", defaultPath,
+                                                "Documents PDF (*.pdf)", nullptr,
+                                                QFileDialog::DontUseNativeDialog);
     if (path.isEmpty()) return false;
     if (!path.endsWith(".pdf", Qt::CaseInsensitive)) path += ".pdf";
 
@@ -218,4 +269,88 @@ bool ModuleTools::exportTableToPdf(QTableWidget *table, const QString &title, QS
         QMessageBox::critical(table, "Export PDF", "Le rapport PDF n'a pas pu être enregistré. Vérifiez le dossier choisi.");
     }
     return created;
+}
+
+bool ModuleTools::isValidEmail(const QString &email)
+{
+    static const QRegularExpression pattern(QStringLiteral(R"(^[^@\s]+@[^@\s]+\.[^@\s]+$)"));
+    return pattern.match(email.trimmed()).hasMatch();
+}
+
+QIcon ModuleTools::standardIcon(QStyle::StandardPixmap icon)
+{
+    QPixmap pixmap(24, 24);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(QPen(QColor("#475569"), 1.8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.setBrush(Qt::NoBrush);
+
+    switch (icon) {
+    case QStyle::SP_ArrowLeft:
+        painter.drawLine(18, 12, 6, 12); painter.drawLine(6, 12, 11, 7); painter.drawLine(6, 12, 11, 17); break;
+    case QStyle::SP_ArrowRight:
+        painter.drawLine(6, 12, 18, 12); painter.drawLine(18, 12, 13, 7); painter.drawLine(18, 12, 13, 17); break;
+    case QStyle::SP_MessageBoxWarning:
+        painter.drawPolygon(QPolygonF({QPointF(12, 4), QPointF(21, 20), QPointF(3, 20)})); painter.drawLine(12, 9, 12, 14); painter.drawPoint(12, 17); break;
+    case QStyle::SP_DialogApplyButton:
+        painter.drawLine(4, 12, 10, 18); painter.drawLine(10, 18, 20, 6); break;
+    case QStyle::SP_DialogCloseButton:
+        painter.drawLine(6, 6, 18, 18); painter.drawLine(18, 6, 6, 18); break;
+    case QStyle::SP_TrashIcon:
+        painter.drawRect(7, 8, 10, 12); painter.drawLine(5, 8, 19, 8); painter.drawLine(9, 5, 15, 5); painter.drawLine(10, 11, 10, 17); painter.drawLine(14, 11, 14, 17); break;
+    case QStyle::SP_BrowserReload:
+        painter.drawArc(5, 5, 14, 14, 45 * 16, 270 * 16); painter.drawLine(17, 5, 18, 10); painter.drawLine(17, 5, 12, 6); break;
+    case QStyle::SP_DialogSaveButton:
+        painter.drawLine(12, 4, 12, 16); painter.drawLine(7, 12, 12, 17); painter.drawLine(12, 17, 17, 12); painter.drawLine(5, 20, 19, 20); break;
+    case QStyle::SP_DirHomeIcon:
+        painter.drawPolygon(QPolygonF({QPointF(4, 11), QPointF(12, 4), QPointF(20, 11)})); painter.drawRect(6, 11, 12, 9); painter.drawRect(10, 14, 4, 6); break;
+    case QStyle::SP_DirOpenIcon:
+    case QStyle::SP_FileDialogNewFolder:
+        painter.drawPath(QPainterPath(QPointF(4, 8))); painter.drawLine(4, 8, 10, 8); painter.drawLine(10, 8, 12, 10); painter.drawLine(12, 10, 20, 10); painter.drawLine(20, 10, 18, 19); painter.drawLine(18, 19, 4, 19); painter.drawLine(4, 19, 4, 8);
+        if (icon == QStyle::SP_FileDialogNewFolder) { painter.drawLine(12, 12, 12, 17); painter.drawLine(9.5, 14.5, 14.5, 14.5); } break;
+    case QStyle::SP_FileDialogDetailedView:
+        painter.drawLine(5, 7, 19, 7); painter.drawLine(5, 12, 19, 12); painter.drawLine(5, 17, 19, 17); painter.drawPoint(3, 7); painter.drawPoint(3, 12); painter.drawPoint(3, 17); break;
+    case QStyle::SP_FileDialogContentsView:
+        painter.drawRect(5, 5, 14, 14); painter.drawLine(8, 9, 16, 9); painter.drawLine(8, 13, 16, 13); painter.drawLine(8, 17, 14, 17); break;
+    case QStyle::SP_FileDialogInfoView:
+        painter.drawEllipse(5, 5, 14, 14); painter.drawPoint(12, 9); painter.drawLine(12, 12, 12, 17); break;
+    case QStyle::SP_ComputerIcon:
+        painter.drawRect(4, 5, 16, 11); painter.drawLine(9, 20, 15, 20); painter.drawLine(12, 16, 12, 20); break;
+    default:
+        return QApplication::style()->standardIcon(icon);
+    }
+    return QIcon(pixmap);
+}
+
+QWidget *ModuleTools::createPaginationControls(QTableWidget *table, int pageSize)
+{
+    auto *container = new QWidget(table->parentWidget());
+    auto *layout = new QHBoxLayout(container);
+    layout->setContentsMargins(0, 4, 0, 4);
+    auto *previous = new QToolButton(container);
+    auto *next = new QToolButton(container);
+    previous->setIcon(standardIcon(QStyle::SP_ArrowLeft));
+    next->setIcon(standardIcon(QStyle::SP_ArrowRight));
+    previous->setToolTip("Page précédente");
+    next->setToolTip("Page suivante");
+    auto *summary = new QLabel(container);
+    summary->setAlignment(Qt::AlignCenter);
+    layout->addStretch();
+    layout->addWidget(previous);
+    layout->addWidget(summary);
+    layout->addWidget(next);
+    layout->addStretch();
+    auto *controller = new TablePagination(table, pageSize, table);
+    controller->setControls(previous, next, summary);
+    return container;
+}
+
+void ModuleTools::refreshPagination(QTableWidget *table)
+{
+    const auto children = table->findChildren<QObject *>();
+    for (QObject *child : children) {
+        if (auto *controller = dynamic_cast<TablePagination *>(child))
+            controller->refresh();
+    }
 }

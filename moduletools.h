@@ -3,6 +3,8 @@
 
 #include <QStringList>
 #include <QVector>
+#include <QIcon>
+#include <QStyle>
 
 class QWidget;
 class QTableWidget;
@@ -18,6 +20,10 @@ public:
                                     int categoryColumn, const QString &title);
     static bool exportTableToPdf(QTableWidget *table, const QString &title,
                                  QString *outputPath = nullptr);
+    static bool isValidEmail(const QString &email);
+    static QIcon standardIcon(QStyle::StandardPixmap icon);
+    static QWidget *createPaginationControls(QTableWidget *table, int pageSize = 8);
+    static void refreshPagination(QTableWidget *table);
 };
 
 #endif // MODULETOOLS_H

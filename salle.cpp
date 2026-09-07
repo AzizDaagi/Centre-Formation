@@ -60,7 +60,14 @@ bool Salle::supprimer() {
 QList<Salle> Salle::listerTout() {
     QList<Salle> resultats;
     QSqlQuery query(DB::instance().database());
-    query.prepare("SELECT ID_SALLE, NOM_SALLE, CAPACITE, TYPE_SALLE, STATUT FROM SALLE ORDER BY ID_SALLE");
+    query.prepare(
+        "SELECT s.ID_SALLE, s.NOM_SALLE, s.CAPACITE, s.TYPE_SALLE, "
+        "CASE WHEN UPPER(TRIM(s.STATUT)) = 'DISPONIBLE' "
+        "AND EXISTS (SELECT 1 FROM SALLE_RESERVATION r "
+        "WHERE r.ID_SALLE = s.ID_SALLE AND r.STATUT = 'CONFIRMEE' AND r.DATE_FIN >= SYSDATE) "
+        "THEN 'RESERVEE' ELSE s.STATUT END "
+        "FROM SALLE s ORDER BY s.ID_SALLE"
+    );
 
     if (!query.exec()) {
         qDebug() << "Erreur liste salles:" << query.lastError().text();
@@ -94,4 +101,32 @@ Salle Salle::trouverParId(int id) {
             );
     }
     return Salle(); // salle vide/invalide si non trouvée
+}
+
+bool Salle::mettreAJourSignalement(int id, const QString &statut,
+                                   const QString &description, const QString &auteur)
+{
+    if (id <= 0) {
+        qWarning() << "Cannot update room report: invalid room id" << id;
+        return false;
+    }
+    QSqlQuery query(DB::instance().database());
+    query.prepare("UPDATE SALLE SET REPORT_STATUS = :statut, REPORT_DESCRIPTION = :description, "
+                  "REPORT_AUTHOR = :auteur WHERE ID_SALLE = :id");
+    query.bindValue(":statut", statut);
+    query.bindValue(":description", description);
+    query.bindValue(":auteur", auteur);
+    query.bindValue(":id", id);
+    const bool ok = query.exec();
+    if (!ok) qWarning() << "Room report update failed:" << query.lastError().text();
+    return ok;
+}
+
+bool Salle::effacerSignalement(int id)
+{
+    QSqlQuery query(DB::instance().database());
+    query.prepare("UPDATE SALLE SET REPORT_STATUS = 'NONE', REPORT_DESCRIPTION = NULL, "
+                  "REPORT_AUTHOR = NULL WHERE ID_SALLE = :id");
+    query.bindValue(":id", id);
+    return query.exec();
 }

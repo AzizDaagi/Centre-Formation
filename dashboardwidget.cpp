@@ -1,5 +1,6 @@
 #include "dashboardwidget.h"
 #include "db.h"
+#include "moduletools.h"
 
 DashboardWidget::DashboardWidget(QWidget *parent)
     : QWidget(parent)
@@ -23,10 +24,10 @@ void DashboardWidget::setupUi()
     QHBoxLayout *kpiLayout = new QHBoxLayout();
     kpiLayout->setSpacing(15);
 
-    kpiLayout->addWidget(createKpiCard("Total Salles", "🏠", &m_lblTotalSalles, "#2563EB"));
-    kpiLayout->addWidget(createKpiCard("Formateurs", "👨‍🏫", &m_lblTotalFormateurs, "#7C3AED"));
-    kpiLayout->addWidget(createKpiCard("Cours Actifs", "📚", &m_lblTotalCours, "#059669"));
-    kpiLayout->addWidget(createKpiCard("Stagiaires", "🎓", &m_lblTotalStagiaires, "#D97706"));
+    kpiLayout->addWidget(createKpiCard("Total Salles", QStyle::SP_DirHomeIcon, &m_lblTotalSalles, "#2563EB"));
+    kpiLayout->addWidget(createKpiCard("Formateurs", QStyle::SP_FileDialogDetailedView, &m_lblTotalFormateurs, "#7C3AED"));
+    kpiLayout->addWidget(createKpiCard("Cours Actifs", QStyle::SP_FileDialogContentsView, &m_lblTotalCours, "#059669"));
+    kpiLayout->addWidget(createKpiCard("Stagiaires", QStyle::SP_FileDialogInfoView, &m_lblTotalStagiaires, "#D97706"));
 
     mainLayout->addLayout(kpiLayout);
 
@@ -42,9 +43,17 @@ void DashboardWidget::setupUi()
     QVBoxLayout *scheduleCardLayout = new QVBoxLayout(scheduleCard);
     scheduleCardLayout->setContentsMargins(20, 20, 20, 20);
 
-    QLabel *lblScheduleHeader = new QLabel("🕒 Prochains Cours du Jour", scheduleCard);
+    auto *scheduleHeader = new QWidget(scheduleCard);
+    auto *scheduleHeaderLayout = new QHBoxLayout(scheduleHeader);
+    scheduleHeaderLayout->setContentsMargins(0, 0, 0, 0);
+    auto *scheduleIcon = new QLabel(scheduleHeader);
+    scheduleIcon->setPixmap(ModuleTools::standardIcon(QStyle::SP_ArrowRight).pixmap(18, 18));
+    auto *lblScheduleHeader = new QLabel("Prochains Cours du Jour", scheduleHeader);
     lblScheduleHeader->setStyleSheet("font-size: 16px; font-weight: bold; color: #1F2937; border: none;");
-    scheduleCardLayout->addWidget(lblScheduleHeader);
+    scheduleHeaderLayout->addWidget(scheduleIcon);
+    scheduleHeaderLayout->addWidget(lblScheduleHeader);
+    scheduleHeaderLayout->addStretch();
+    scheduleCardLayout->addWidget(scheduleHeader);
 
     // Container for dynamic schedule items
     QFrame *scheduleItemsContainer = new QFrame(scheduleCard);
@@ -64,12 +73,15 @@ void DashboardWidget::setupUi()
     signalsCardLayout->setContentsMargins(20, 20, 20, 20);
 
     QHBoxLayout *signalsHeaderLayout = new QHBoxLayout();
-    QLabel *lblSignalsHeader = new QLabel("⚠️ Signalements", signalsCard);
+    auto *signalsIcon = new QLabel(signalsCard);
+    signalsIcon->setPixmap(ModuleTools::standardIcon(QStyle::SP_MessageBoxWarning).pixmap(18, 18));
+    auto *lblSignalsHeader = new QLabel("Signalements", signalsCard);
     lblSignalsHeader->setStyleSheet("font-size: 16px; font-weight: bold; color: #991B1B; border: none;");
 
     m_lblSignalsCount = new QLabel("0 Actifs", signalsCard);
     m_lblSignalsCount->setStyleSheet("background-color: #EF4444; color: white; border-radius: 10px; padding: 2px 8px; font-weight: bold; border: none;");
 
+    signalsHeaderLayout->addWidget(signalsIcon);
     signalsHeaderLayout->addWidget(lblSignalsHeader);
     signalsHeaderLayout->addStretch();
     signalsHeaderLayout->addWidget(m_lblSignalsCount);
@@ -118,12 +130,15 @@ void DashboardWidget::setupUi()
     usageCardLayout->setContentsMargins(20, 20, 20, 20);
 
     QHBoxLayout *usageHeaderLayout = new QHBoxLayout();
-    QLabel *lblUsageHeader = new QLabel("📊 Occupation Globale des Salles", usageCard);
+    QLabel *lblUsageIcon = new QLabel(usageCard);
+    lblUsageIcon->setPixmap(ModuleTools::standardIcon(QStyle::SP_FileDialogDetailedView).pixmap(18, 18));
+    QLabel *lblUsageHeader = new QLabel("Occupation Globale des Salles", usageCard);
     lblUsageHeader->setStyleSheet("font-size: 15px; font-weight: bold; color: #1F2937; border: none;");
 
     m_lblOccupancyPercent = new QLabel("0%", usageCard);
     m_lblOccupancyPercent->setStyleSheet("font-size: 14px; font-weight: bold; color: #2563EB; border: none;");
 
+    usageHeaderLayout->addWidget(lblUsageIcon);
     usageHeaderLayout->addWidget(lblUsageHeader);
     usageHeaderLayout->addStretch();
     usageHeaderLayout->addWidget(m_lblOccupancyPercent);
@@ -146,14 +161,25 @@ void DashboardWidget::setupUi()
     QVBoxLayout *shortcutsCardLayout = new QVBoxLayout(shortcutsCard);
     shortcutsCardLayout->setContentsMargins(20, 15, 20, 15);
 
-    QLabel *lblShortcutsHeader = new QLabel("⚡ Raccourcis Rapides", shortcutsCard);
+    auto *shortcutsHeader = new QWidget(shortcutsCard);
+    auto *shortcutsHeaderLayout = new QHBoxLayout(shortcutsHeader);
+    shortcutsHeaderLayout->setContentsMargins(0, 0, 0, 0);
+    auto *shortcutsIcon = new QLabel(shortcutsHeader);
+    shortcutsIcon->setPixmap(ModuleTools::standardIcon(QStyle::SP_ArrowRight).pixmap(18, 18));
+    auto *lblShortcutsHeader = new QLabel("Raccourcis Rapides", shortcutsHeader);
     lblShortcutsHeader->setStyleSheet("font-size: 15px; font-weight: bold; color: #1F2937; border: none;");
-    shortcutsCardLayout->addWidget(lblShortcutsHeader);
+    shortcutsHeaderLayout->addWidget(shortcutsIcon);
+    shortcutsHeaderLayout->addWidget(lblShortcutsHeader);
+    shortcutsHeaderLayout->addStretch();
+    shortcutsCardLayout->addWidget(shortcutsHeader);
 
     QHBoxLayout *btnShortcutLayout = new QHBoxLayout();
-    QPushButton *btnAddRoomBtn = new QPushButton("➕ Nouvelle Salle", shortcutsCard);
-    QPushButton *btnAddCourseBtn = new QPushButton("📚 Nouveau Cours", shortcutsCard);
-    QPushButton *btnViewPlanningBtn = new QPushButton("🚪 Planning Salles", shortcutsCard);
+    QPushButton *btnAddRoomBtn = new QPushButton("Nouvelle Salle", shortcutsCard);
+    QPushButton *btnAddCourseBtn = new QPushButton("Nouveau Cours", shortcutsCard);
+    QPushButton *btnViewPlanningBtn = new QPushButton("Planning Salles", shortcutsCard);
+    btnAddRoomBtn->setIcon(ModuleTools::standardIcon(QStyle::SP_FileDialogNewFolder));
+    btnAddCourseBtn->setIcon(ModuleTools::standardIcon(QStyle::SP_FileDialogNewFolder));
+    btnViewPlanningBtn->setIcon(ModuleTools::standardIcon(QStyle::SP_DirOpenIcon));
 
     QString btnShortcutStyle = "QPushButton { background-color: #F3F4F6; color: #374151; font-weight: 600; border-radius: 6px; padding: 8px 12px; border: 1px solid #D1D5DB; }"
                                "QPushButton:hover { background-color: #E5E7EB; color: #111827; }";
@@ -179,7 +205,7 @@ void DashboardWidget::setupUi()
     mainLayout->addLayout(bottomLayout, 1);
 }
 
-QFrame* DashboardWidget::createKpiCard(const QString &title, const QString &icon, QLabel **valueLabel, const QString &accentColor)
+QFrame* DashboardWidget::createKpiCard(const QString &title, QStyle::StandardPixmap icon, QLabel **valueLabel, const QString &accentColor)
 {
     QFrame *card = new QFrame(this);
     card->setStyleSheet(QString("QFrame { background-color: #FFFFFF; border-radius: 12px; border: 1px solid #E5E7EB; border-left: 5px solid %1; }").arg(accentColor));
@@ -191,8 +217,9 @@ QFrame* DashboardWidget::createKpiCard(const QString &title, const QString &icon
     QLabel *lblTitle = new QLabel(title, card);
     lblTitle->setStyleSheet("font-size: 13px; color: #6B7280; font-weight: 600; border: none;");
 
-    QLabel *lblIcon = new QLabel(icon, card);
-    lblIcon->setStyleSheet("font-size: 18px; border: none;");
+    QLabel *lblIcon = new QLabel(card);
+    lblIcon->setPixmap(ModuleTools::standardIcon(icon).pixmap(20, 20));
+    lblIcon->setStyleSheet("border: none;");
 
     topRow->addWidget(lblTitle);
     topRow->addStretch();
@@ -219,16 +246,20 @@ void DashboardWidget::loadKpiMetrics()
 {
     QSqlQuery query(DB::instance().database());
 
-    if (query.exec("SELECT COUNT(*) FROM SALLE") && query.next()) {
+    query.prepare("SELECT COUNT(*) FROM SALLE");
+    if (query.exec() && query.next()) {
         m_lblTotalSalles->setText(query.value(0).toString());
     }
-    if (query.exec("SELECT COUNT(*) FROM FORMATEUR") && query.next()) {
+    query.prepare("SELECT COUNT(*) FROM FORMATEUR");
+    if (query.exec() && query.next()) {
         m_lblTotalFormateurs->setText(query.value(0).toString());
     }
-    if (query.exec("SELECT COUNT(*) FROM COURS") && query.next()) {
+    query.prepare("SELECT COUNT(*) FROM COURS");
+    if (query.exec() && query.next()) {
         m_lblTotalCours->setText(query.value(0).toString());
     }
-    if (query.exec("SELECT COUNT(*) FROM STAGIAIRE") && query.next()) {
+    query.prepare("SELECT COUNT(*) FROM STAGIAIRE");
+    if (query.exec() && query.next()) {
         m_lblTotalStagiaires->setText(query.value(0).toString());
     }
 }
@@ -270,7 +301,7 @@ void DashboardWidget::loadUpcomingCourses()
             QHBoxLayout *itemLayout = new QHBoxLayout(itemFrame);
             itemLayout->setContentsMargins(10, 8, 10, 8);
 
-            QLabel *lblInfo = new QLabel(QString("📚 <b>%1</b> — Salle: <b>%2</b> | Formateur: <i>%3</i> (%4h)")
+            QLabel *lblInfo = new QLabel(QString("<b>%1</b> — Salle: <b>%2</b> | Formateur: <i>%3</i> (%4h)")
                                              .arg(courseName, roomName, trainerName).arg(hours), itemFrame);
             lblInfo->setStyleSheet("font-size: 13px; color: #374151; border: none;");
 
@@ -290,7 +321,7 @@ void DashboardWidget::loadSignalsSummary()
 {
     QSqlQuery query(DB::instance().database());
     // Count active signals from SALLE and COURS using UNION ALL
-    query.exec(
+    query.prepare(
         "SELECT "
         "  (SELECT COUNT(*) FROM SALLE WHERE REPORT_STATUS IS NOT NULL AND UPPER(TRIM(REPORT_STATUS)) != 'NONE') + "
         "  (SELECT COUNT(*) FROM COURS WHERE REPORT_STATUS IS NOT NULL AND UPPER(TRIM(REPORT_STATUS)) != 'NONE') AS TOTAL_REPORTS "
@@ -298,19 +329,19 @@ void DashboardWidget::loadSignalsSummary()
     );
 
     int totalReports = 0;
-    if (query.next()) {
+    if (query.exec() && query.next()) {
         totalReports = query.value("TOTAL_REPORTS").toInt();
     }
 
     m_lblSignalsCount->setText(QString("%1 Actif%2").arg(totalReports).arg(totalReports > 1 ? "s" : ""));
 
     if (totalReports == 0) {
-        m_lblSignalsPreviewText->setText("✅ Tout est en ordre. Aucun signalement en attente.");
+        m_lblSignalsPreviewText->setText("Tout est en ordre. Aucun signalement en attente.");
         m_lblSignalsPreviewMeta->setText("");
     } else {
         // Fetch the most recent report preview from SALLE or COURS via UNION ALL
         QSqlQuery previewQuery(DB::instance().database());
-        previewQuery.exec(
+        previewQuery.prepare(
             "SELECT TYPE_OBJET, NOM_OBJET, REPORT_DESCRIPTION, REPORT_AUTHOR, REPORT_STATUS FROM ("
             "  SELECT 'SALLE' AS TYPE_OBJET, NOM_SALLE AS NOM_OBJET, REPORT_DESCRIPTION, REPORT_AUTHOR, REPORT_STATUS "
             "  FROM SALLE WHERE REPORT_STATUS IS NOT NULL AND UPPER(TRIM(REPORT_STATUS)) != 'NONE' "
@@ -320,7 +351,7 @@ void DashboardWidget::loadSignalsSummary()
             ") WHERE ROWNUM = 1"
         );
 
-        if (previewQuery.next()) {
+        if (previewQuery.exec() && previewQuery.next()) {
             QString type = previewQuery.value("TYPE_OBJET").toString();
             QString name = previewQuery.value("NOM_OBJET").toString();
             QString desc = previewQuery.value("REPORT_DESCRIPTION").toString();
@@ -339,11 +370,18 @@ void DashboardWidget::loadOccupancyData()
     int totalRooms = 0;
     int occupiedRooms = 0;
 
-    if (query.exec("SELECT COUNT(*) FROM SALLE") && query.next()) {
+    query.prepare("SELECT COUNT(*) FROM SALLE");
+    if (query.exec() && query.next()) {
         totalRooms = query.value(0).toInt();
     }
 
-    if (query.exec("SELECT COUNT(*) FROM SALLE WHERE UPPER(TRIM(STATUT)) != 'DISPONIBLE'") && query.next()) {
+    query.prepare(
+            "SELECT COUNT(*) FROM SALLE s "
+            "WHERE UPPER(TRIM(s.STATUT)) != 'DISPONIBLE' "
+            "OR EXISTS (SELECT 1 FROM SALLE_RESERVATION r "
+            "WHERE r.ID_SALLE = s.ID_SALLE AND r.STATUT = 'CONFIRMEE' AND r.DATE_FIN >= SYSDATE)"
+        );
+    if (query.exec() && query.next()) {
         occupiedRooms = query.value(0).toInt();
     }
 

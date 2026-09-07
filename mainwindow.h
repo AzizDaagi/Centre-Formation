@@ -19,6 +19,7 @@ public:
 private slots:
     void tenterConnexion();
     void deconnecter();
+    void ouvrirProfil();
 
 private:
     void setupUi();

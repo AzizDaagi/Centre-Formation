@@ -12,6 +12,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDebug>
+#include <QStyle>
 
 class DashboardWidget : public QWidget
 {
@@ -51,7 +52,8 @@ private:
 
     // Setup Helpers
     void setupUi();
-    QFrame* createKpiCard(const QString &title, const QString &icon, QLabel **valueLabel, const QString &accentColor);
+    QFrame* createKpiCard(const QString &title, QStyle::StandardPixmap icon,
+                          QLabel **valueLabel, const QString &accentColor);
 
     // Database Fetching Helpers
     void loadKpiMetrics();

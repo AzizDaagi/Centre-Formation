@@ -217,3 +217,22 @@ Stagiaire Stagiaire::trouverParId(int id)
 
     return Stagiaire();
 }
+
+bool Stagiaire::ajouterHeures(int id, double heures)
+{
+    QSqlQuery query(DB::instance().database());
+    query.prepare("UPDATE STAGIAIRE SET HEURES_VALIDEES = NVL(HEURES_VALIDEES, 0) + :heures "
+                  "WHERE ID_STAGIAIRE = :id");
+    query.bindValue(":heures", heures);
+    query.bindValue(":id", id);
+    return query.exec();
+}
+
+bool Stagiaire::mettreAJourStatut(int id, const QString &statut)
+{
+    QSqlQuery query(DB::instance().database());
+    query.prepare("UPDATE STAGIAIRE SET STATUT = :statut WHERE ID_STAGIAIRE = :id");
+    query.bindValue(":statut", statut);
+    query.bindValue(":id", id);
+    return query.exec();
+}

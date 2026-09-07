@@ -8,6 +8,8 @@
 #include "db.h"
 #include "roleworkspace.h"
 #include "incidentresolutiondialog.h"
+#include "userprofiledialog.h"
+#include "moduletools.h"
 
 // Qt GUI & Layout Headers
 #include <QVBoxLayout>
@@ -24,11 +26,7 @@
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QTableWidget>
-#include <QDialog>
 #include <QGraphicsDropShadowEffect>
-#include <QSqlQuery>
-#include <QSqlError>
-#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -139,10 +137,10 @@ void MainWindow::tenterConnexion() {
     } else if (session.role == UserRole::ADMIN) {
         m_stackPages->setCurrentIndex(2);
     } else if (session.role == UserRole::FORMATEUR) {
-        m_formateurWorkspace->setUser(session.userId, session.prenom, session.nom);
+        m_formateurWorkspace->setUser(session.userId, session.prenom, session.nom, session.email);
         m_stackPages->setCurrentIndex(3);
     } else if (session.role == UserRole::STAGIAIRE) {
-        m_stagiaireWorkspace->setUser(session.userId, session.prenom, session.nom);
+        m_stagiaireWorkspace->setUser(session.userId, session.prenom, session.nom, session.email);
         m_stackPages->setCurrentIndex(4);
     } else {
         m_stackPages->setCurrentIndex(1);
@@ -163,7 +161,7 @@ void MainWindow::mettreAJourContextesUtilisateur() {
     QString displayName = !m_userPrenomConnecte.isEmpty() ? m_userPrenomConnecte : m_userEmailConnecte;
 
     if (m_lblWelcomeAdmin) {
-        m_lblWelcomeAdmin->setText(QString("Bienvenue, <b>%1</b> 👋").arg(displayName));
+        m_lblWelcomeAdmin->setText(QString("Bienvenue, <b>%1</b>").arg(displayName));
     }
     if (m_lblBadgeAdmin) {
         m_lblBadgeAdmin->setText(QString("<b>%1</b>").arg(m_userRoleConnecte));
@@ -202,12 +200,18 @@ QWidget* MainWindow::creerDashboardAdmin(bool superAdmin) {
     sidebarLayout->addWidget(lblLogo);
     sidebarLayout->addSpacing(20);
 
-    QPushButton* btnTableauDeBord = new QPushButton("  📊  Tableau de Bord");
-    QPushButton* btnSalles        = new QPushButton("  🏠  Salles");
-    QPushButton* btnFormateurs    = new QPushButton("  👨‍🏫  Formateurs");
-    QPushButton* btnCours         = new QPushButton("  📚  Cours");
-    QPushButton* btnStagiaires    = new QPushButton("  🎓  Stagiaires");
-    QPushButton* btnLogout        = new QPushButton("  🚪  Déconnexion");
+    QPushButton* btnTableauDeBord = new QPushButton("Tableau de Bord");
+    QPushButton* btnSalles        = new QPushButton("Salles");
+    QPushButton* btnFormateurs    = new QPushButton("Formateurs");
+    QPushButton* btnCours         = new QPushButton("Cours");
+    QPushButton* btnStagiaires    = new QPushButton("Stagiaires");
+    QPushButton* btnLogout        = new QPushButton("Déconnexion");
+    btnTableauDeBord->setIcon(ModuleTools::standardIcon(QStyle::SP_ComputerIcon));
+    btnSalles->setIcon(ModuleTools::standardIcon(QStyle::SP_DirHomeIcon));
+    btnFormateurs->setIcon(ModuleTools::standardIcon(QStyle::SP_FileDialogDetailedView));
+    btnCours->setIcon(ModuleTools::standardIcon(QStyle::SP_FileDialogContentsView));
+    btnStagiaires->setIcon(ModuleTools::standardIcon(QStyle::SP_FileDialogInfoView));
+    btnLogout->setIcon(ModuleTools::standardIcon(QStyle::SP_DialogCloseButton));
 
     btnTableauDeBord->setCheckable(true);
     btnSalles->setCheckable(true);
@@ -252,7 +256,7 @@ QWidget* MainWindow::creerDashboardAdmin(bool superAdmin) {
     QHBoxLayout* headerLayout = new QHBoxLayout(topHeader);
     headerLayout->setContentsMargins(20, 10, 20, 10);
 
-    m_lblWelcomeAdmin = new QLabel("Bienvenue, <b>Admin</b> 👋");
+    m_lblWelcomeAdmin = new QLabel("Bienvenue, <b>Admin</b>");
     m_lblWelcomeAdmin->setStyleSheet("font-size: 13pt; color: #1a2b27;");
 
     m_lblBadgeAdmin = new QLabel("<b>ADMIN</b>");
@@ -260,6 +264,14 @@ QWidget* MainWindow::creerDashboardAdmin(bool superAdmin) {
 
     headerLayout->addWidget(m_lblWelcomeAdmin);
     headerLayout->addStretch();
+
+    QPushButton* btnAdminProfil = new QPushButton("Mon Profil", topHeader);
+    btnAdminProfil->setIcon(ModuleTools::standardIcon(QStyle::SP_FileDialogInfoView));
+    btnAdminProfil->setObjectName("btnVider");
+    btnAdminProfil->setStyleSheet("padding: 6px 14px; font-weight: bold; font-size: 10pt;");
+    connect(btnAdminProfil, &QPushButton::clicked, this, &MainWindow::ouvrirProfil);
+    headerLayout->addWidget(btnAdminProfil);
+
     headerLayout->addWidget(m_lblBadgeAdmin);
 
     // Module Views Stack
@@ -341,6 +353,7 @@ QWidget* MainWindow::creerDashboardFormateur() {
 
     mainLayout->addLayout(header);
     m_formateurWorkspace = new RoleWorkspace(RoleWorkspace::Mode::Formateur, page);
+    connect(m_formateurWorkspace, &RoleWorkspace::openProfileRequested, this, &MainWindow::ouvrirProfil);
     mainLayout->addWidget(m_formateurWorkspace);
     return page;
 }
@@ -360,6 +373,29 @@ QWidget* MainWindow::creerDashboardStagiaire() {
 
     mainLayout->addLayout(header);
     m_stagiaireWorkspace = new RoleWorkspace(RoleWorkspace::Mode::Stagiaire, page);
+    connect(m_stagiaireWorkspace, &RoleWorkspace::openProfileRequested, this, &MainWindow::ouvrirProfil);
     mainLayout->addWidget(m_stagiaireWorkspace);
     return page;
+}
+
+void MainWindow::ouvrirProfil() {
+    if (m_userIdConnecte < 0) return;
+
+    UserProfileDialog::UserType uType = UserProfileDialog::UserType::Admin;
+    if (m_userRoleConnecte == "FORMATEUR") {
+        uType = UserProfileDialog::UserType::Formateur;
+    } else if (m_userRoleConnecte == "STAGIAIRE") {
+        uType = UserProfileDialog::UserType::Stagiaire;
+    }
+
+    UserProfileDialog dlg(m_userIdConnecte, uType, this);
+    connect(&dlg, &UserProfileDialog::profileUpdated, this, [this](const QString &newPrenom, const QString &newNom) {
+        m_userPrenomConnecte = newPrenom;
+        m_userNomConnecte = newNom;
+        mettreAJourContextesUtilisateur();
+        if (m_formateurWorkspace) m_formateurWorkspace->setUser(m_userIdConnecte, newPrenom, newNom, m_userEmailConnecte);
+        if (m_stagiaireWorkspace) m_stagiaireWorkspace->setUser(m_userIdConnecte, newPrenom, newNom, m_userEmailConnecte);
+    });
+
+    dlg.exec();
 }

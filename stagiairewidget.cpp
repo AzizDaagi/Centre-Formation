@@ -59,7 +59,9 @@ QWidget* StagiaireWidget::creerPageListe(){
     m_chart=new QChartView(); m_chart->setMinimumHeight(210);
     QPushButton *pdf=new QPushButton("Exporter PDF"); pdf->setObjectName("btnVider"); bar->insertWidget(1,pdf);
     connect(pdf,&QPushButton::clicked,this,[this]{ ModuleTools::exportTableToPdf(m_tableStagiaires,"Rapport des stagiaires"); });
-    cl->addLayout(hdr); cl->addWidget(tools); cl->addWidget(m_tableStagiaires); cl->addWidget(m_chart); cl->addLayout(bar); lay->addWidget(card); return page;
+    cl->addLayout(hdr); cl->addWidget(tools); cl->addWidget(m_tableStagiaires);
+    cl->addWidget(ModuleTools::createPaginationControls(m_tableStagiaires));
+    cl->addWidget(m_chart); cl->addLayout(bar); lay->addWidget(card); return page;
 }
 QWidget* StagiaireWidget::creerPageFormulaire(){
     QWidget* page=new QWidget(); QVBoxLayout* lay=new QVBoxLayout(page); lay->setContentsMargins(0,0,0,0);
@@ -125,6 +127,7 @@ void StagiaireWidget::rafraichirTable(){
     }
     m_lblCount->setText(QString::number(list.size())+" stagiaire"+(list.size()>1?"s":""));
     ModuleTools::updateCategoryChart(m_chart,m_tableStagiaires,6,"Répartition des stagiaires par statut");
+    ModuleTools::refreshPagination(m_tableStagiaires);
     mettreAJourBoutonsListe();
 }
 void StagiaireWidget::afficherListe(){ retourListe(); rafraichirTable(); }
@@ -165,7 +168,13 @@ void StagiaireWidget::enregistrer(){
     QString nom=m_editNom->text().trimmed(), prenom=m_editPrenom->text().trimmed(), email=m_editEmail->text().trimmed(), pwd=m_editPassword->text();
     mark(m_editNom,nom.isEmpty()); if(nom.isEmpty()) valid=false;
     mark(m_editPrenom,prenom.isEmpty()); if(prenom.isEmpty()) valid=false;
-    mark(m_editEmail,email.isEmpty()); if(email.isEmpty()) valid=false;
+    const bool invalidEmail = email.isEmpty() || !ModuleTools::isValidEmail(email);
+    mark(m_editEmail,invalidEmail); if(invalidEmail) valid=false;
+    if (invalidEmail) m_editEmail->setPlaceholderText("Adresse email invalide");
+    if (m_dateDebut->date() >= m_dateFin->date()) {
+        QMessageBox::warning(this, "Validation", "La date de début doit être antérieure à la date de fin.");
+        valid = false;
+    }
     if(m_modeAjout&&pwd.isEmpty()){ m_editPassword->setStyleSheet("border:1.5px solid #f43f5e;border-radius:8px;"); m_editPassword->setPlaceholderText("Mot de passe requis"); valid=false; }
     else m_editPassword->setStyleSheet("");
     if(!valid) return;
