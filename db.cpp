@@ -1,10 +1,8 @@
 #include "db.h"
 #include <QDebug>
 #include <QSqlError>
-#include <QSqlQuery>
 #include <QSettings>
 #include <QFileInfo>
-#include <QFile>
 #include <QCoreApplication>
 
 DB& DB::instance() {
@@ -52,19 +50,6 @@ bool DB::connect() {
         m_lastError = db.lastError().text();
         qDebug() << "Connection failed:" << m_lastError;
         return false;
-    }
-
-    QSqlQuery schemaQuery(db);
-    QFile schemaFile(":/database/schema.sql");
-    if (!schemaFile.open(QFile::ReadOnly | QFile::Text)) {
-        m_lastError = "Impossible de lire le schema SQL: " + schemaFile.errorString();
-        return false;
-    }
-    const QString schemaSql = QString::fromUtf8(schemaFile.readAll());
-    schemaFile.close();
-
-    if (!schemaQuery.exec(schemaSql) && schemaQuery.lastError().nativeErrorCode() != "955") {
-        qWarning() << "Could not ensure SALLE_RESERVATION exists:" << schemaQuery.lastError().text();
     }
 
     qDebug() << "Connected to Oracle successfully.";
